@@ -224,5 +224,3 @@ Portfolio: `https://your-portfolio.example`
 Twitter: `@your_twitter_handle`
 
 ---
-
-> 📝 Tip: Replace placeholders in this README (badges, links, screenshots) with your real project links before publishing to GitHub to make the repo look polished and professional.
