@@ -1,4 +1,4 @@
-# Multitenant Identity Core
+# AuthTenant
 
 > A professional .NET 8.0 backend template showcasing multi-tenant authentication and authorization with modern patterns (DDD, CQRS, MediatR, Clean Code).
 
