@@ -1,0 +1,205 @@
+# 📋 Documentação: LoginCommand.cs
+
+## 🎯 **Objetivo**
+Record imutável que representa um comando de autenticação de usuário, encapsulando credenciais e contexto de tenant para o processo de login.
+
+## 🔧 **Funcionalidades Principais**
+
+### **1. Estrutura de Dados Imutável**
+- ✅ Record sealed para imutabilidade e performance
+- ✅ Propriedades readonly com validação de dados
+- ✅ Implementação de IRequest<Result<AuthResponseDto>>
+- ✅ Suporte a padrão CQRS com MediatR
+
+### **2. Validação de Dados**
+- ✅ Data Annotations para validação automática
+- ✅ Validação de email com formato e tamanho
+- ✅ Validação de senha com critérios mínimos
+- ✅ Validação de TenantId obrigatório
+- ✅ Método IsValid() para validação programática
+
+### **3. Normalização de Dados**
+- ✅ NormalizedEmail para processamento consistente
+- ✅ Conversão automática para lowercase
+- ✅ Tratamento de valores nulos
+- ✅ Padronização de entrada
+
+### **4. Segurança e Logging**
+- ✅ ToString() sobrescrito excluindo password
+- ✅ Representação segura para logs
+- ✅ Proteção de dados sensíveis
+- ✅ Audit trail sem exposição de credenciais
+
+### **5. Documentação Profissional**
+- ✅ XML Documentation completa
+- ✅ Documentação de parâmetros e retornos
+- ✅ Exemplos de uso implícitos
+- ✅ Comentários explicativos
+
+## 🏗️ **Arquitetura**
+
+### **Estrutura do Record:**
+```csharp
+public sealed record LoginCommand(
+    string Email,      // Email do usuário para autenticação
+    string Password,   // Senha do usuário para autenticação  
+    string TenantId    // Identificador do tenant para contexto multi-tenant
+) : IRequest<Result<AuthResponseDto>>
+```
+
+### **Propriedades Adicionais:**
+- `NormalizedEmail`: Email normalizado para processamento
+- `IsValid()`: Método de validação programática
+- `ToString()`: Representação segura para logging
+
+### **Data Annotations:**
+- `[Required]`: Campos obrigatórios
+- `[EmailAddress]`: Validação de formato de email
+- `[StringLength]`: Limitação de tamanho de campos
+
+## 📊 **Validações Implementadas**
+
+### **Email:**
+```
+- Required: Obrigatório
+- EmailAddress: Formato válido de email
+- StringLength: Máximo 256 caracteres
+- Contains('@'): Verificação básica de formato
+```
+
+### **Password:**
+```
+- Required: Obrigatório
+- StringLength: Entre 6 e 100 caracteres
+- MinimumLength: Mínimo 6 caracteres para segurança
+```
+
+### **TenantId:**
+```
+- Required: Obrigatório para contexto multi-tenant
+- StringLength: Máximo 50 caracteres
+- NotNullOrWhiteSpace: Não pode ser vazio
+```
+
+## 🔒 **Segurança**
+
+### **Proteção de Dados Sensíveis:**
+- Password não aparece em ToString()
+- Logs seguros sem exposição de credenciais
+- Validação de entrada robusta
+- Normalização consistente de dados
+
+### **Validação de Entrada:**
+- Verificação de formato de email
+- Critérios mínimos de senha
+- Validação de tamanho de campos
+- Prevenção de valores nulos/vazios
+
+## 🎮 **Uso e Integração**
+
+### **Criação do Command:**
+```csharp
+var loginCommand = new LoginCommand(
+    Email: "user@example.com",
+    Password: "securePassword123",
+    TenantId: "tenant-001"
+);
+```
+
+### **Validação:**
+```csharp
+if (!loginCommand.IsValid())
+{
+    // Tratar dados inválidos
+}
+
+var normalizedEmail = loginCommand.NormalizedEmail;
+```
+
+### **Logging Seguro:**
+```csharp
+_logger.LogInformation("Processing: {Command}", loginCommand.ToString());
+// Output: LoginCommand(Email=user@example.com, TenantId=tenant-001)
+```
+
+## 📈 **Benefícios da Implementação**
+
+### **Imutabilidade:**
+- Thread-safe por design
+- Prevenção de modificações acidentais
+- Debugging mais fácil
+- Behavior predictable
+
+### **Validação Automática:**
+- Data Annotations integradas
+- Validação no pipeline MediatR
+- Feedback imediato de erros
+- Consistency across application
+
+### **Segurança:**
+- Proteção de dados sensíveis em logs
+- Validação robusta de entrada
+- Normalização consistente
+- Audit trail seguro
+
+### **Manutenibilidade:**
+- Código limpo e legível
+- Documentação completa
+- Estrutura clara de dados
+- Fácil extensão e modificação
+
+## 🧪 **Testabilidade**
+
+### **Pontos de Teste:**
+- Validação de Data Annotations
+- Método IsValid() com diferentes cenários
+- NormalizedEmail com vários formatos
+- ToString() não expõe password
+
+### **Cenários de Teste:**
+- Dados válidos completos
+- Email inválido (formato, tamanho)
+- Password inválida (tamanho, nula)
+- TenantId inválido (nulo, vazio)
+- Normalização de email
+
+## 🚀 **Performance**
+
+### **Otimizações:**
+- Record sealed para JIT optimization
+- String interning para emails comuns
+- Validação lazy com IsValid()
+- Memory efficient immutable structure
+
+### **Memory Usage:**
+- Estrutura compacta
+- Referências compartilhadas
+- Garbage collection friendly
+- Stack allocation quando possível
+
+## 📝 **Changelog**
+
+### **Versão Atual:**
+- ✅ Migração de class para sealed record
+- ✅ Implementação de Data Annotations
+- ✅ Adição de propriedade NormalizedEmail
+- ✅ Método IsValid() para validação programática
+- ✅ ToString() seguro para logging
+- ✅ Documentação XML completa
+
+### **Melhorias Implementadas:**
+- Imutabilidade com record
+- Validação automática robusta
+- Segurança em logging
+- Normalização de dados
+- Documentação profissional
+
+### **Breaking Changes:**
+- Migração de class para record (compatibilidade mantida)
+- ToString() agora exclui password
+- Validação mais restritiva
+
+---
+**Data da Última Atualização:** 05/09/2025  
+**Versão:** 2.0 (Refatorada)  
+**Status:** ✅ Produção Ready

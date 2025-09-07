@@ -1,0 +1,436 @@
+=========================================================
+UNAUTHORIZEDTENANTACCESSEXCEPTION.CS - DOCUMENTAÇÃO TÉCNICA
+=========================================================
+
+VISÃO GERAL:
+-----------
+Exceção de segurança lançada quando tentativas de acesso não autorizado a tenants são detectadas.
+Representa violações de isolamento multi-tenant, tentativas de acesso cross-tenant e falhas de autorização.
+Fornece contexto rico para auditoria de segurança e detecção de ameaças.
+
+LOCALIZAÇÃO:
+-----------
+📁 AuthTenant.Domain/Exceptions/UnauthorizedTenantAccessException.cs
+
+DEPENDÊNCIAS:
+------------
+✅ DomainException - Herança de funcionalidades base
+✅ System.ComponentModel.DataAnnotations - Validações de dados
+✅ ExceptionSeverity - Enum de severidade de segurança
+✅ System.Linq - Operações de análise de dados
+
+RESPONSABILIDADES:
+-----------------
+🔸 Detectar e reportar violações de segurança multi-tenant
+🔸 Auditar tentativas de acesso cross-tenant
+🔸 Contextualizar ameaças e padrões suspeitos
+🔸 Fornecer dados para sistemas de segurança
+🔸 Mascarar informações sensíveis em logs
+🔸 Categorizar tipos de violações de acesso
+
+PROPRIEDADES DE SEGURANÇA:
+-------------------------
+
+1. CONTEXTO DO ACESSO:
+   ✅ RequestedTenantId (string?) - Tenant solicitado
+   ✅ UserTenantId (string?) - Tenant do usuário
+   ✅ AccessType (string) - Tipo de acesso tentado
+   ✅ RequestedResource (string?) - Recurso específico
+   ✅ Detecção de tentativas cross-tenant
+
+2. CONTEXTO DA OPERAÇÃO:
+   ✅ OperationId (string?) - Identificador da operação
+   ✅ SourceIpAddress (string?) - IP de origem
+   ✅ UserAgent (string?) - User agent da aplicação
+   ✅ AttemptedAt (DateTime) - Timestamp da tentativa
+   ✅ Rastreamento completo da requisição
+
+3. ANÁLISE DE AMEAÇAS:
+   ✅ IsSuspiciousAttempt (bool) - Detecção de atividade suspeita
+   ✅ ThreatIndicators (List<string>) - Indicadores de ameaça
+   ✅ SecurityLevel (string) - Nível de severidade
+   ✅ IsCrossTenantAttempt (bool) - Flag de acesso cross-tenant
+
+TIPOS DE ACESSO MONITORADOS:
+---------------------------
+
+🔐 **Read** - Tentativas de leitura não autorizadas
+   • Visualização de dados protegidos
+   • Enumeração de recursos
+   • Information gathering
+
+🔐 **Write** - Tentativas de modificação não autorizadas
+   • Alteração de dados
+   • Criação de recursos
+   • Updates maliciosos
+
+🔐 **Delete** - Tentativas de remoção não autorizadas
+   • Exclusão de dados críticos
+   • Sabotagem de recursos
+   • Data destruction
+
+🔐 **Admin** - Tentativas de acesso administrativo
+   • Privilege escalation
+   • Configuration changes
+   • System administration
+
+🔐 **CrossTenant** - Tentativas de acesso entre tenants
+   • Data breach attempts
+   • Unauthorized data access
+   • Tenant isolation violations
+
+🔐 **NoTenant** - Acesso sem contexto de tenant válido
+   • Bypass de isolation
+   • System-level access
+   • Configuration exploitation
+
+SEVERIDADE AUTOMÁTICA:
+---------------------
+
+🟡 **Medium** - Read access violations
+   • Tentativas de leitura não autorizadas
+   • Enumeração básica de recursos
+   • Exploratory attacks
+
+🟠 **High** - Write/Delete access violations
+   • Tentativas de modificação de dados
+   • Cross-tenant access attempts
+   • Data manipulation attempts
+
+🔴 **Critical** - Admin access violations
+   • Privilege escalation attempts
+   • System-level access attempts
+   • Administrative bypass attempts
+
+DETECÇÃO DE AMEAÇAS:
+-------------------
+
+🚨 **DetermineSuspiciousActivity():**
+   - Admin access sempre flagrado como suspeito
+   - Recursos sensíveis (user, admin, config, billing, security)
+   - IPs suspeitos (locais em produção, ranges conhecidos)
+   - Padrões de comportamento anômalos
+
+🚨 **GetThreatIndicators():**
+   - ADMIN_ACCESS_ATTEMPT
+   - SENSITIVE_RESOURCE_ACCESS
+   - INTERNAL_IP_ACCESS
+   - CROSS_TENANT_VIOLATION
+   - ENUMERATION_PATTERN
+   - PRIVILEGE_ESCALATION
+
+MASCARAMENTO DE DADOS:
+---------------------
+
+🎭 **MaskIpAddress():**
+   ```csharp
+   // IPv4: 192.168.1.100 → 192.168.xxx.xxx
+   // IPv6: 2001:db8::1 → 2001:db8:xxxx
+   ```
+
+🎭 **TruncateUserAgent():**
+   ```csharp
+   // Limita a 200 caracteres + "..."
+   ```
+
+🎭 **Context Sanitization:**
+   - Remove informações sensíveis
+   - Preserva dados úteis para auditoria
+   - Compliance com LGPD/GDPR
+
+FACTORY METHODS DE SEGURANÇA:
+----------------------------
+
+🏭 **ForCrossTenantAccess():**
+   ```csharp
+   ForCrossTenantAccess(requestedTenantId, userTenantId, userId, resource)
+   ```
+   - Para violações de isolamento entre tenants
+   - Severidade High automática
+   - Context rico para investigação
+
+🏭 **ForAdminAccess():**
+   ```csharp
+   ForAdminAccess(tenantId, userId, operation, sourceIp)
+   ```
+   - Para tentativas de acesso administrativo
+   - Severidade Critical automática
+   - Máxima auditoria e alertas
+
+🏭 **ForUserWithoutTenant():**
+   ```csharp
+   ForUserWithoutTenant(userId, sourceIp)
+   ```
+   - Para usuários sem contexto de tenant
+   - Bypass de isolation detection
+   - Security policy violation
+
+CONTEXTO ESTRUTURADO:
+--------------------
+
+🗂️ **Contexto Automático de Segurança:**
+   ```json
+   {
+     "requestedTenantId": "tenant-123",
+     "userTenantId": "tenant-456",
+     "accessType": "CrossTenant",
+     "requestedResource": "Products",
+     "operationId": "GetProducts",
+     "sourceIpAddress": "192.168.xxx.xxx",
+     "userAgent": "Mozilla/5.0...",
+     "attemptedAt": "2024-01-15T10:30:00Z",
+     "isSuspiciousAttempt": true,
+     "isCrossTenantAttempt": true,
+     "securityLevel": "High",
+     "threatIndicators": [
+       "CROSS_TENANT_VIOLATION",
+       "SENSITIVE_RESOURCE_ACCESS"
+     ]
+   }
+   ```
+
+INTEGRAÇÃO COM SEGURANÇA:
+------------------------
+🔗 **SIEM Systems** - Export estruturado de eventos
+🔗 **WAF Integration** - Blocking de IPs suspeitos
+🔗 **Rate Limiting** - Throttling de tentativas
+🔗 **Audit Trail** - Compliance e investigação
+🔗 **Alerting** - Notificação em tempo real
+🔗 **Threat Intelligence** - Enriquecimento de dados
+
+CENÁRIOS DE SEGURANÇA:
+---------------------
+✅ **Cross-Tenant Data Breach** - Tentativa de acesso a dados de outros tenants
+✅ **Privilege Escalation** - Usuário tenta acessar recursos administrativos
+✅ **Enumeration Attack** - Varredura sistemática de recursos
+✅ **Insider Threat** - Usuário legítimo com acesso suspeito
+✅ **API Abuse** - Uso indevido de endpoints protegidos
+✅ **Session Hijacking** - Tentativa de usar sessão de outro usuário
+
+EXEMPLO DE IMPLEMENTAÇÃO:
+------------------------
+```csharp
+// Middleware de segurança
+public class TenantSecurityMiddleware
+{
+    public async Task InvokeAsync(HttpContext context, RequestDelegate next)
+    {
+        var currentUser = context.User;
+        var requestedTenant = ExtractTenantFromRequest(context.Request);
+        var userTenant = ExtractUserTenant(currentUser);
+        
+        // Verificação cross-tenant
+        if (!string.IsNullOrEmpty(requestedTenant) && 
+            !string.IsNullOrEmpty(userTenant) && 
+            requestedTenant != userTenant)
+        {
+            var sourceIp = GetClientIpAddress(context);
+            var userAgent = context.Request.Headers["User-Agent"];
+            var operation = $"{context.Request.Method} {context.Request.Path}";
+            
+            throw UnauthorizedTenantAccessException.ForCrossTenantAccess(
+                requestedTenant, 
+                userTenant, 
+                currentUser.FindFirst("id")?.Value,
+                ExtractResourceFromPath(context.Request.Path))
+                .WithProperty("SourceIP", sourceIp)
+                .WithProperty("UserAgent", userAgent)
+                .WithProperty("Operation", operation)
+                .WithCorrelationId(GetCorrelationId(context));
+        }
+        
+        await next(context);
+    }
+}
+```
+
+EXEMPLO DE USO EM SERVIÇOS:
+--------------------------
+```csharp
+// Repository com proteção
+public async Task<IEnumerable<Product>> GetProductsAsync(
+    string tenantId, 
+    string userId)
+{
+    var currentUserTenant = await GetUserTenantAsync(userId);
+    
+    if (currentUserTenant != tenantId)
+    {
+        throw UnauthorizedTenantAccessException.ForCrossTenantAccess(
+            requestedTenantId: tenantId,
+            userTenantId: currentUserTenant,
+            userId: userId,
+            resource: "Products");
+    }
+    
+    return await _context.Products
+        .Where(p => p.TenantId == tenantId)
+        .ToListAsync();
+}
+
+// Service com auditoria
+public async Task DeleteProductAsync(string productId, string userId)
+{
+    var user = await GetUserAsync(userId);
+    
+    if (!user.HasRole("Admin"))
+    {
+        throw UnauthorizedTenantAccessException.ForAdminAccess(
+            tenantId: user.TenantId,
+            userId: userId,
+            operation: "DeleteProduct",
+            sourceIp: GetCurrentRequestIp());
+    }
+    
+    // Continua com a operação...
+}
+```
+
+TRATAMENTO EM CONTROLLERS:
+-------------------------
+```csharp
+[HttpGet("{tenantId}/products")]
+public async Task<IActionResult> GetProducts(string tenantId)
+{
+    try
+    {
+        var userId = User.FindFirst("id")?.Value;
+        var products = await _productService.GetProductsAsync(tenantId, userId);
+        return Ok(products);
+    }
+    catch (UnauthorizedTenantAccessException ex)
+    {
+        // Log de segurança
+        _securityLogger.LogSecurityViolation(ex.ToJson());
+        
+        // Alerta em tempo real para High/Critical
+        if (ex.Severity >= ExceptionSeverity.High)
+        {
+            await _alertingService.SendSecurityAlertAsync(ex);
+        }
+        
+        // Rate limiting para IP suspeito
+        if (ex.IsSuspiciousAttempt)
+        {
+            await _rateLimitingService.BlockIpAsync(ex.SourceIpAddress);
+        }
+        
+        // Resposta genérica para não vazar informações
+        return Forbid("Acesso negado ao recurso solicitado");
+    }
+}
+```
+
+COMPLIANCE E AUDITORIA:
+----------------------
+
+📋 **LGPD/GDPR Compliance:**
+   - Mascaramento automático de dados pessoais
+   - Right to erasure support
+   - Data processing lawfulness
+
+📋 **SOX Compliance:**
+   - Audit trail completo
+   - Segregation of duties
+   - Financial data protection
+
+📋 **ISO 27001:**
+   - Access control monitoring
+   - Security incident management
+   - Risk assessment data
+
+📋 **PCI-DSS:**
+   - Cardholder data protection
+   - Access logging
+   - Security testing evidence
+
+MÉTRICAS DE SEGURANÇA:
+---------------------
+📊 **Security KPIs:**
+   - Unauthorized access attempts per day
+   - Cross-tenant violations rate
+   - Admin access violation trends
+   - Suspicious activity patterns
+
+📊 **Threat Detection:**
+   - Real-time anomaly detection
+   - Behavioral analysis
+   - Geographic pattern analysis
+   - Time-based access patterns
+
+📊 **Response Metrics:**
+   - Mean time to detection (MTTD)
+   - Mean time to response (MTTR)
+   - False positive rate
+   - Security team efficiency
+
+ALERTING E ESCALAÇÃO:
+--------------------
+
+🚨 **Immediate Alerts (Critical):**
+   - Admin access violations
+   - Mass data access attempts
+   - Known attack patterns
+
+🚨 **Hourly Alerts (High):**
+   - Cross-tenant violations
+   - Sensitive resource access
+   - Repeated violations
+
+🚨 **Daily Alerts (Medium):**
+   - Unusual access patterns
+   - Geographic anomalies
+   - New device access
+
+EXTENSÕES DE SEGURANÇA:
+----------------------
+🔮 **Machine Learning** - Behavioral anomaly detection
+🔮 **Threat Intelligence** - Integration with threat feeds
+🔮 **Geolocation** - Geographic access analysis
+🔮 **Device Fingerprinting** - Device-based security
+🔮 **Risk Scoring** - Comprehensive risk assessment
+🔮 **Automated Response** - Immediate threat mitigation
+
+PERFORMANCE DE SEGURANÇA:
+------------------------
+⚡ Minimal overhead em operações normais
+⚡ Async security logging para não bloquear requests
+⚡ Cached security policies
+⚡ Optimized threat detection algorithms
+⚡ Lazy evaluation de contexto complexo
+
+TESTES DE SEGURANÇA:
+-------------------
+🧪 **Unit Tests** - Cenários de violação isolados
+🧪 **Integration Tests** - Fluxos completos de segurança
+🧪 **Penetration Tests** - Simulação de ataques reais
+🧪 **Load Tests** - Performance sob pressão
+🧪 **Chaos Engineering** - Resilience testing
+
+CONSIDERAÇÕES DE ARQUITETURA:
+-----------------------------
+⚠️ **Defense in Depth** - Múltiplas camadas de proteção
+⚠️ **Fail Secure** - Falhas devem bloquear acesso
+⚠️ **Least Privilege** - Acesso mínimo necessário
+⚠️ **Zero Trust** - Verificação contínua
+⚠️ **Audit Everything** - Log completo de atividades
+⚠️ **Assume Breach** - Detecção rápida de violações
+
+VERSIONAMENTO:
+-------------
+📋 Versão: 2.0.0
+📋 Última Atualização: 2024
+📋 Compatibilidade: .NET 8+
+📋 Security Level: High
+📋 Threat Detection: Advanced
+📋 Status: Produção
+
+AUTOR & RESPONSÁVEL:
+-------------------
+👨‍💻 Desenvolvido por: Equipe AuthTenant Security
+👨‍💻 Mantido por: Time de Security & Compliance
+📧 Contato: security@AuthTenant.com
+🔗 Documentação: docs.AuthTenant.com/security/tenant-access
+🚨 Security Issues: security-alerts@AuthTenant.com
+
+=========================================================

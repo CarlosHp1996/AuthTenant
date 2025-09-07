@@ -1,0 +1,243 @@
+=================================
+DOCUMENTAÇÃO TÉCNICA - IProductRepository.cs
+=================================
+
+ARQUIVO: AuthTenant.Domain/Repositories/IProductRepository.cs
+CATEGORIA: Repository Interface (Domain)
+ÚLTIMA ATUALIZAÇÃO: ${DateTime.Now}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. VISÃO GERAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+DESCRIÇÃO:
+Interface específica para operações de repositório de produtos, estendendo
+o repositório base com operações especializadas para busca, paginação e
+filtragem de produtos. Segue o padrão Repository do DDD.
+
+RESPONSABILIDADES:
+• Definir contrato para operações específicas de produtos
+• Estender operações base do IRepository<Product>
+• Prover métodos de busca e filtragem avançados
+• Garantir isolamento por tenant automaticamente
+• Manter separação entre domínio e infraestrutura
+
+ARQUITETURA:
+• Repository Pattern (DDD)
+• Interface Segregation Principle (SOLID)
+• Dependency Inversion Principle
+• Domain-Driven Design Contracts
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. ESTRUTURA TÉCNICA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+HERANÇA:
+• IRepository<Product>: Operações CRUD básicas
+• IDisposable: Gerenciamento de recursos (via herança)
+• IAsyncDisposable: Operações assíncronas (via herança)
+
+MÉTODOS ESPECÍFICOS:
+• GetActiveProductsAsync(): Produtos ativos (não deletados)
+• SearchProductsAsync(): Busca por termo livre
+• GetPagedProductsAsync(): Paginação de resultados
+• GetProductsByCategoryAsync(): Filtragem por categoria
+• ExistsByNameAsync(): Verificação de duplicidade
+
+DEPENDÊNCIAS:
+• AuthTenant.Domain.Entities.Product
+• AuthTenant.Domain.Interfaces.IRepository<T>
+• System.Threading.CancellationToken
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. OPERAÇÕES ESPECIALIZADAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BUSCA E FILTRAGEM:
+• GetActiveProductsAsync(): Filtra produtos com IsDeleted = false
+• SearchProductsAsync(): Busca case-insensitive em campos de texto
+• GetProductsByCategoryAsync(): Agrupamento por categoria
+• Filtros automáticos por tenant em todas as operações
+
+PAGINAÇÃO:
+• GetPagedProductsAsync(): Suporte a paginação eficiente
+• Ordenação padrão por data de criação (mais recentes primeiro)
+• Validação de parâmetros de paginação
+• Otimização para grandes volumes de dados
+
+VALIDAÇÃO DE DUPLICIDADE:
+• ExistsByNameAsync(): Verificação de nomes únicos por tenant
+• Suporte a exclusão de ID específico (para updates)
+• Comparação case-insensitive
+• Isolamento por tenant automático
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. IMPLEMENTAÇÃO DE PADRÕES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+REPOSITORY PATTERN:
+• Abstração da camada de dados
+• Encapsulamento da lógica de acesso a dados
+• Independência de tecnologia de persistência
+• Facilita testes unitários com mocks
+
+DOMAIN-DRIVEN DESIGN:
+• Interface no domínio, implementação na infraestrutura
+• Linguagem ubíqua refletida nos nomes dos métodos
+• Agregados e entidades bem definidos
+• Separação clara de responsabilidades
+
+SOLID PRINCIPLES:
+• SRP: Responsabilidade única para operações de produto
+• OCP: Extensível através de herança de interface
+• LSP: Substituível por qualquer implementação válida
+• ISP: Interface específica e coesa
+• DIP: Depende de abstrações, não implementações
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. MULTI-TENANCY E SEGURANÇA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ISOLAMENTO POR TENANT:
+• Todas as operações respeitam o contexto do tenant atual
+• Filtros automáticos aplicados em todas as consultas
+• Impossibilidade de acesso a dados de outros tenants
+• Transparência para a camada de aplicação
+
+SOFT DELETE:
+• Produtos "deletados" mantidos no banco com IsDeleted = true
+• Métodos GetActive filtram automaticamente produtos deletados
+• Possibilidade de auditoria e recuperação de dados
+• Consistência com padrão da entidade base
+
+VALIDAÇÕES DE SEGURANÇA:
+• Validação de parâmetros de entrada
+• Proteção contra SQL injection (via Entity Framework)
+• Timeouts configuráveis via CancellationToken
+• Logs de auditoria das operações críticas
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. PERFORMANCE E OTIMIZAÇÃO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+OTIMIZAÇÕES RECOMENDADAS:
+• Implementar cache para consultas frequentes
+• Usar índices apropriados para campos de busca
+• Implementar paginação eficiente com OFFSET/LIMIT
+• Considerar uso de projeções para consultas de listagem
+
+CONSULTAS EFICIENTES:
+• SearchProductsAsync: Full-text search ou LIKE otimizado
+• GetActiveProductsAsync: Índice composto (TenantId, IsDeleted)
+• GetPagedProductsAsync: Ordenação eficiente
+• ExistsByNameAsync: Índice único composto
+
+MONITORAMENTO:
+• Log de consultas lentas (> 1 segundo)
+• Métricas de uso por método
+• Monitoramento de deadlocks
+• Alertas para operações críticas
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. TESTES E QUALIDADE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CENÁRIOS DE TESTE RECOMENDADOS:
+• Operações básicas CRUD (via interface base)
+• Busca com diferentes termos e filtros
+• Paginação com diversos tamanhos de página
+• Verificação de isolamento por tenant
+• Comportamento com dados deletados
+
+TESTES DE INTEGRAÇÃO:
+• Implementação real com Entity Framework
+• Performance com grandes volumes de dados
+• Transações e rollback
+• Concorrência e locks
+
+MOCKS PARA TESTES UNITÁRIOS:
+• Mock da interface para testes de serviços
+• Verificação de chamadas e parâmetros
+• Simulação de exceções e erros
+• Testes de timeout e cancellation
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+8. IMPLEMENTAÇÃO RECOMENDADA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ESTRUTURA DA IMPLEMENTAÇÃO:
+• Classe ProductRepository : Repository<Product>, IProductRepository
+• Herdar comportamento base do Repository<T>
+• Implementar métodos específicos usando Entity Framework
+• Aplicar filtros de tenant e soft delete automaticamente
+
+CONSIDERAÇÕES TÉCNICAS:
+• Usar IQueryable para construção de consultas eficientes
+• Implementar includes apropriados para evitar N+1
+• Tratar exceções específicas de banco de dados
+• Implementar retry policies para operações críticas
+
+CONFIGURAÇÃO DE DEPENDÊNCIAS:
+• Registrar como Scoped no container DI
+• Configurar lifetime apropriado para Entity Framework
+• Implementar factory pattern se necessário
+• Considerar pools de conexão para alta performance
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+9. EXEMPLO DE USO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// Injeção de dependência no serviço
+public class ProductService
+{
+    private readonly IProductRepository _productRepository;
+    
+    public ProductService(IProductRepository productRepository)
+    {
+        _productRepository = productRepository;
+    }
+    
+    // Busca paginada
+    public async Task<IEnumerable<Product>> GetProductsAsync(int page, int size)
+    {
+        return await _productRepository.GetPagedProductsAsync(page, size);
+    }
+    
+    // Busca por termo
+    public async Task<IEnumerable<Product>> SearchAsync(string term)
+    {
+        if (string.IsNullOrWhiteSpace(term))
+            return await _productRepository.GetActiveProductsAsync();
+            
+        return await _productRepository.SearchProductsAsync(term);
+    }
+    
+    // Validação antes de criar
+    public async Task<bool> CanCreateProductAsync(string name)
+    {
+        return !await _productRepository.ExistsByNameAsync(name);
+    }
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+10. EVOLUÇÃO E MANUTENÇÃO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+VERSIONAMENTO DA INTERFACE:
+• Adicionar novos métodos sem quebrar implementações existentes
+• Usar métodos com parâmetros opcionais para retrocompatibilidade
+• Considerar interfaces separadas para funcionalidades avançadas
+• Documentar breaking changes claramente
+
+EXTENSÕES FUTURAS:
+• Métodos de agregação (contagens, somas)
+• Suporte a filtros complexos (specifications pattern)
+• Operações em lote (bulk operations)
+• Cache integrado com invalidação automática
+• Suporte a consultas assíncronas streaming
+
+MONITORAMENTO E MÉTRICAS:
+• Instrumentação com logs estruturados
+• Métricas de performance por método
+• Alertas para operações lentas ou com falha
+• Dashboard de saúde do repositório

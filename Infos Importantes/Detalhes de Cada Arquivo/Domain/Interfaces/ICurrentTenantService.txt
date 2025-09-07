@@ -1,0 +1,336 @@
+# ICurrentTenantService.cs - Documentação Técnica
+
+## Visão Geral
+**Localização**: `AuthTenant.Domain/Interfaces/ICurrentTenantService.cs`
+**Tipo**: Interface de Serviço de Domínio
+**Propósito**: Gerencia o contexto de tenant atual em aplicações multi-tenant, fornecendo isolamento e controle de acesso.
+
+## Responsabilidades
+- Gerenciar contexto de tenant atual por requisição/sessão
+- Fornecer validação e controle de acesso por tenant
+- Implementar isolamento de dados multi-tenant
+- Suportar operações síncronas e assíncronas
+- Gerar eventos para mudanças de contexto
+
+## Estrutura da Interface
+
+### Propriedades Principais
+```csharp
+string? CurrentTenantId { get; }           // ID do tenant atual
+ITenantInfo? CurrentTenant { get; }        // Informações completas do tenant
+bool HasTenant { get; }                    // Se há tenant definido
+bool IsSystemContext { get; }              // Se está em contexto de sistema
+```
+
+### Métodos de Gerenciamento
+```csharp
+Task SetTenantAsync(string tenantId)       // Define tenant assincronamente
+void SetTenant(string tenantId)            // Define tenant sincronamente
+void ClearTenant()                         // Limpa contexto de tenant
+Task<bool> IsValidTenantAsync(string id)   // Valida tenant
+Task<bool> HasAccessToTenantAsync(string id) // Verifica acesso
+```
+
+### Configuração e Métricas
+```csharp
+ITenantConfiguration GetConfiguration()    // Configurações do tenant
+ITenantMetrics GetMetrics()               // Métricas de uso
+Task RefreshTenantDataAsync()             // Atualiza dados do tenant
+```
+
+### Eventos
+```csharp
+event EventHandler<TenantContextChangedEventArgs> TenantContextChanged
+```
+
+## Interfaces Auxiliares
+
+### **ITenantInfo**
+```csharp
+public interface ITenantInfo
+{
+    string Id { get; }
+    string Name { get; }
+    string? Domain { get; }
+    bool IsActive { get; }
+    DateTime CreatedAt { get; }
+    Dictionary<string, object> Settings { get; }
+}
+```
+
+### **ITenantConfiguration** 
+```csharp
+public interface ITenantConfiguration
+{
+    string DatabaseConnectionString { get; }
+    Dictionary<string, string> Features { get; }
+    Dictionary<string, object> CustomSettings { get; }
+    int MaxUsers { get; }
+    long MaxStorage { get; }
+}
+```
+
+### **ITenantMetrics**
+```csharp
+public interface ITenantMetrics
+{
+    int CurrentUsers { get; }
+    long CurrentStorage { get; }
+    int ApiCallsToday { get; }
+    DateTime LastActivity { get; }
+    Dictionary<string, object> CustomMetrics { get; }
+}
+```
+
+## Padrões Implementados
+
+### 1. **Multi-Tenancy**
+- Isolamento completo de dados por tenant
+- Contexto por requisição/thread
+- Validação automática de acesso
+
+### 2. **Service Locator**
+- Acesso centralizado ao contexto de tenant
+- Injeção de dependência otimizada
+- Lazy loading de informações
+
+### 3. **Observer Pattern**
+- Eventos para mudanças de contexto
+- Notificação de componentes interessados
+- Auditoria de troca de tenant
+
+### 4. **Circuit Breaker**
+- Proteção contra falhas de validação
+- Fallback para contexto seguro
+- Recuperação automática
+
+## Cenários de Uso
+
+### **1. Aplicações Web**
+```csharp
+// Em middleware ou filtro
+app.Use(async (context, next) =>
+{
+    var tenantId = ResolveTenantId(context);
+    await tenantService.SetTenantAsync(tenantId);
+    await next();
+});
+```
+
+### **2. Validação de Acesso**
+```csharp
+// Em controladores ou serviços
+public async Task<Product> GetProduct(int id)
+{
+    if (!await tenantService.HasAccessToTenantAsync(product.TenantId))
+        throw new UnauthorizedAccessException();
+    
+    return await repository.GetByIdAsync(id);
+}
+```
+
+### **3. Configuração Dinâmica**
+```csharp
+// Obter configurações específicas do tenant
+var config = tenantService.GetConfiguration();
+var connectionString = config.DatabaseConnectionString;
+var maxUsers = config.MaxUsers;
+```
+
+## Implementação Recomendada
+
+### **Registro de Serviço**
+```csharp
+services.AddScoped<ICurrentTenantService, CurrentTenantService>();
+services.AddSingleton<ITenantResolver, HttpContextTenantResolver>();
+services.AddScoped<ITenantValidator, TenantValidator>();
+```
+
+### **Middleware de Tenant**
+```csharp
+public class TenantMiddleware
+{
+    public async Task InvokeAsync(HttpContext context, ICurrentTenantService tenantService)
+    {
+        var tenantId = ResolveTenantFromRequest(context);
+        
+        if (!string.IsNullOrEmpty(tenantId))
+        {
+            await tenantService.SetTenantAsync(tenantId);
+        }
+        
+        await _next(context);
+    }
+}
+```
+
+## Estratégias de Resolução de Tenant
+
+### **1. Por Subdomínio**
+```
+tenant1.app.com -> TenantId: tenant1
+tenant2.app.com -> TenantId: tenant2
+```
+
+### **2. Por Header HTTP**
+```
+X-Tenant-ID: tenant1
+Authorization: Bearer {tenant-specific-token}
+```
+
+### **3. Por Rota**
+```
+/api/tenant1/products
+/api/tenant2/products
+```
+
+### **4. Por Domínio Customizado**
+```
+custom-domain.com -> Mapeado para TenantId específico
+```
+
+## Considerações de Segurança
+
+### **Isolamento de Dados**
+- Validação rigorosa de tenant
+- Prevenção de cross-tenant access
+- Auditoria de acessos
+
+### **Autorização**
+- Verificação de permissões por tenant
+- Controle de features habilitadas
+- Limites de uso e quotas
+
+### **Auditoria**
+- Log de mudanças de contexto
+- Rastreamento de acessos
+- Detecção de anomalias
+
+## Performance e Otimização
+
+### **Cache de Tenant**
+```csharp
+// Cache de informações de tenant
+private readonly IMemoryCache _tenantCache;
+
+public async Task<ITenantInfo> GetTenantInfoAsync(string tenantId)
+{
+    return await _tenantCache.GetOrCreateAsync($"tenant_{tenantId}", 
+        async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30);
+            return await LoadTenantFromDatabase(tenantId);
+        });
+}
+```
+
+### **Lazy Loading**
+- Carregamento sob demanda de configurações
+- Cache local de dados frequentes
+- Invalidação inteligente de cache
+
+## Integração com Entity Framework
+
+### **Query Filters Globais**
+```csharp
+protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity<Product>()
+        .HasQueryFilter(p => p.TenantId == _tenantService.CurrentTenantId);
+}
+```
+
+### **Interceptação Automática**
+```csharp
+public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+{
+    foreach (var entry in ChangeTracker.Entries<ITenantEntity>())
+    {
+        if (entry.State == EntityState.Added)
+        {
+            entry.Entity.TenantId = _tenantService.CurrentTenantId;
+        }
+    }
+    
+    return base.SaveChangesAsync(cancellationToken);
+}
+```
+
+## Tratamento de Erros
+
+### **Tenant Inválido**
+```csharp
+public async Task SetTenantAsync(string tenantId)
+{
+    if (!await IsValidTenantAsync(tenantId))
+    {
+        throw new InvalidTenantException($"Tenant '{tenantId}' não encontrado ou inativo");
+    }
+    
+    CurrentTenantId = tenantId;
+    TenantContextChanged?.Invoke(this, new TenantContextChangedEventArgs(tenantId));
+}
+```
+
+### **Acesso Negado**
+```csharp
+public async Task<bool> HasAccessToTenantAsync(string tenantId)
+{
+    // Verificar se usuário atual tem acesso ao tenant
+    var currentUser = _userService.GetCurrentUser();
+    return await _tenantValidator.ValidateAccessAsync(currentUser.Id, tenantId);
+}
+```
+
+## Monitoramento e Métricas
+
+### **Métricas de Uso**
+- Número de trocas de contexto por sessão
+- Tempo de validação de tenant
+- Cache hit ratio para dados de tenant
+- Distribuição de uso por tenant
+
+### **Alertas**
+- Tentativas de acesso a tenant inválido
+- Número excessivo de trocas de contexto
+- Falhas de validação recorrentes
+- Uso acima de quotas definidas
+
+## Melhorias Implementadas na Refatoração
+
+### **Funcionalidades Adicionadas**
+1. **Contexto Rico**: ITenantInfo com dados completos
+2. **Configuração Dinâmica**: ITenantConfiguration para settings
+3. **Métricas**: ITenantMetrics para monitoramento
+4. **Eventos**: TenantContextChanged para observabilidade
+5. **Validação Assíncrona**: Métodos async para performance
+
+### **Padrões Aplicados**
+1. **Dependency Injection**: Integração nativa com DI
+2. **Observer Pattern**: Eventos para mudanças
+3. **Command Pattern**: Métodos claramente definidos
+4. **Strategy Pattern**: Diferentes estratégias de resolução
+
+### **Melhorias de Arquitetura**
+1. **Separação de Responsabilidades**: Interfaces específicas
+2. **Extensibilidade**: Fácil adição de novas funcionalidades
+3. **Testabilidade**: Interfaces mockáveis
+4. **Performance**: Cache e lazy loading
+
+## Roadmap de Evolução
+
+### **Próximas Funcionalidades**
+1. **Multi-Database**: Suporte a databases separados por tenant
+2. **Sharding**: Distribuição automática de tenants
+3. **Load Balancing**: Roteamento inteligente por tenant
+4. **Backup Seletivo**: Backup por tenant individual
+
+### **Integrações Futuras**
+1. **Identity Providers**: SSO por tenant
+2. **Message Queues**: Isolamento de filas por tenant
+3. **File Storage**: Storage segregado por tenant
+4. **Analytics**: Métricas avançadas por tenant
+
+## Conclusão
+
+A interface `ICurrentTenantService` é fundamental para implementação robusta de multi-tenancy, fornecendo isolamento seguro, performance otimizada e extensibilidade para futuras necessidades. A refatoração implementou padrões modernos de arquitetura e melhorou significativamente a observabilidade e configurabilidade do sistema.

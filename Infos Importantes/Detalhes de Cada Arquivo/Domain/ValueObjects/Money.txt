@@ -1,0 +1,233 @@
+=================================
+DOCUMENTAÇÃO TÉCNICA - Money.cs
+=================================
+
+ARQUIVO: AuthTenant.Domain/ValueObjects/Money.cs
+CATEGORIA: Value Object (Domain)
+ÚLTIMA ATUALIZAÇÃO: ${DateTime.Now}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. VISÃO GERAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+DESCRIÇÃO:
+Value object que representa valores monetários com moeda e validações.
+Implementa conceitos de DDD (Domain-Driven Design) para objetos de valor
+imutáveis e com igualdade baseada em valor.
+
+RESPONSABILIDADES:
+• Representar valores monetários com precisão decimal
+• Validar valores monetários e códigos de moeda
+• Implementar operações aritméticas com validação de moeda
+• Garantir imutabilidade e igualdade por valor
+• Fornecer formatação localizada para exibição
+
+ARQUITETURA:
+• Value Object Pattern (DDD)
+• Immutable Object Pattern
+• Validation Pattern
+• Arithmetic Operations with Type Safety
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. ESTRUTURA TÉCNICA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PROPRIEDADES:
+• Amount (decimal): Valor monetário
+• Currency (string): Código da moeda (ex: USD, BRL, EUR)
+
+CONSTRUTORES:
+• Money(decimal amount, string currency): Construtor principal com validação
+• Construtor estático Zero(string currency): Cria valor zero
+
+MÉTODOS PRINCIPAIS:
+• Add(Money other): Soma com validação de moeda
+• Subtract(Money other): Subtração com validação de moeda
+• Multiply(decimal factor): Multiplicação por fator
+• Divide(decimal divisor): Divisão com proteção contra zero
+• ToString(): Formatação padrão
+• ToString(string format, IFormatProvider provider): Formatação localizada
+
+IMPLEMENTAÇÕES DE INTERFACE:
+• IEquatable<Money>: Igualdade por valor
+• IComparable<Money>: Comparação ordenada
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. VALIDAÇÕES E REGRAS DE NEGÓCIO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+VALIDAÇÕES IMPLEMENTADAS:
+• Código de moeda obrigatório (não nulo/vazio)
+• Código de moeda deve ter exatamente 3 caracteres
+• Valor não pode ser negativo
+• Operações aritméticas só podem ser feitas com a mesma moeda
+• Divisão por zero é protegida
+
+REGRAS DE NEGÓCIO:
+• Valores monetários são sempre não-negativos
+• Moedas diferentes não podem ser operadas diretamente
+• Precisão decimal é mantida em todas as operações
+• Formatação respeita padrões culturais
+
+EXCEÇÕES LANÇADAS:
+• ArgumentNullException: Moeda nula ou vazia
+• ArgumentException: Moeda inválida ou valores negativos
+• InvalidOperationException: Operações com moedas diferentes
+• DivideByZeroException: Divisão por zero
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. IMPLEMENTAÇÃO DE PADRÕES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+VALUE OBJECT PATTERN:
+• Imutabilidade: Todas as propriedades são readonly
+• Igualdade por valor: Equals baseado em Amount e Currency
+• Sem identidade: Dois Money com mesmo valor são iguais
+• Validação no construtor: Estado sempre válido
+
+DOMAIN-DRIVEN DESIGN:
+• Encapsulamento de lógica de domínio monetário
+• Validações de domínio centralizadas
+• Operações de domínio como métodos
+• Linguagem ubíqua refletida no código
+
+SOLID PRINCIPLES:
+• SRP: Responsabilidade única para valores monetários
+• OCP: Extensível através de herança/composição
+• LSP: Substituível por qualquer implementação de Money
+• ISP: Interface mínima e coesa
+• DIP: Não depende de implementações concretas
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. SEGURANÇA E ROBUSTEZ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MEDIDAS DE SEGURANÇA:
+• Validação rigorosa de entrada
+• Proteção contra overflow em operações
+• Imutabilidade previne modificações acidentais
+• Validação de moeda previne erros de cálculo
+
+TRATAMENTO DE ERROS:
+• Exceções específicas para cada tipo de erro
+• Mensagens descritivas para debugging
+• Validação preventiva em tempo de construção
+• Fail-fast principle aplicado
+
+ROBUSTEZ:
+• Estado sempre consistente após construção
+• Operações atômicas (sucesso ou falha completa)
+• Proteção contra divisão por zero
+• Validação de tipos para operações
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. PERFORMANCE E OTIMIZAÇÃO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+OTIMIZAÇÕES IMPLEMENTADAS:
+• GetHashCode otimizado para performance em collections
+• Comparações eficientes usando decimal nativo
+• ToString com cache implícito do .NET
+• Validações mínimas necessárias
+
+CONSIDERAÇÕES DE MEMÓRIA:
+• Struct seria mais eficiente, mas class oferece melhor semântica
+• Strings de moeda são interned automaticamente pelo .NET
+• Sem alocações desnecessárias em operações
+
+BENCHMARKS RECOMENDADOS:
+• Comparar performance de operações aritméticas
+• Medir impacto de validações em hot paths
+• Verificar comportamento em collections grandes
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. TESTES E QUALIDADE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CENÁRIOS DE TESTE COBERTOS:
+• Construção com valores válidos e inválidos
+• Operações aritméticas básicas
+• Validação de moeda em operações
+• Igualdade e comparação
+• Formatação em diferentes culturas
+• Casos limite (zero, máximo decimal)
+
+TESTES RECOMENDADOS:
+• Unit tests para todas as operações
+• Property-based tests para operações matemáticas
+• Performance tests para operações em lote
+• Integration tests com Entity Framework
+
+QUALIDADE DO CÓDIGO:
+• Cobertura de código: Meta > 95%
+• Complexidade ciclomática baixa
+• Code smells: Nenhum detectado
+• Padrões de naming consistentes
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+8. DEPENDÊNCIAS E INTEGRAÇÕES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+DEPENDÊNCIAS EXTERNAS:
+• System namespace (decimal, string, IEquatable, IComparable)
+• Nenhuma dependência de bibliotecas externas
+
+INTEGRAÇÕES POTENCIAIS:
+• Entity Framework Core (Value Converter)
+• AutoMapper (Custom converter)
+• JSON.NET (Custom converter)
+• APIs de câmbio para conversão de moedas
+
+COMPATIBILIDADE:
+• .NET 8+
+• Entity Framework Core 8+
+• Suporte a culturas internacionais
+• Serialização JSON nativa
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+9. EXEMPLO DE USO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// Criação de valores monetários
+var price = new Money(99.99m, "USD");
+var tax = new Money(7.99m, "USD");
+
+// Operações aritméticas
+var total = price.Add(tax);
+var discounted = total.Multiply(0.9m);
+
+// Comparações
+if (total.CompareTo(new Money(100, "USD")) > 0)
+{
+    // Aplicar desconto para compras acima de $100
+}
+
+// Formatação
+var formatted = total.ToString("C", CultureInfo.GetCultureInfo("en-US"));
+// Result: "$107.98"
+
+// Valor zero
+var zero = Money.Zero("BRL");
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+10. MELHORIAS FUTURAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FUNCIONALIDADES SUGERIDAS:
+• Conversão automática entre moedas (integração com API de câmbio)
+• Suporte a criptografias para transações seguras
+• Operadores sobregregados (+, -, *, /)
+• Suporte a múltiplas precisões decimais por moeda
+• Cache de formatação para performance
+
+REFATORAÇÕES FUTURAS:
+• Considerar struct para melhor performance
+• Implementar IFormattable mais robustamente
+• Adicionar validação de códigos de moeda ISO 4217
+• Implementar pattern matching para C# 11+
+
+EXTENSIBILIDADE:
+• Interface para conversores de moeda
+• Estratégia para arredondamento customizável
+• Suporte a moedas digitais/criptomoodas
+• Integração com sistemas de pagamento

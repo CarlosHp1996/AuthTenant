@@ -1,0 +1,480 @@
+=========================================================
+USERREGISTEREDEVENT.CS - DOCUMENTAÇÃO TÉCNICA
+=========================================================
+
+VISÃO GERAL:
+-----------
+Evento de domínio especializado disparado quando um novo usuário se registra.
+Orquestra processos críticos de onboarding, configuração inicial, envio de emails
+de boas-vindas, verificação de identidade e integração com sistemas externos.
+Implementa rich context para diferentes origens de registro.
+
+LOCALIZAÇÃO:
+-----------
+📁 AuthTenant.Domain/Events/UserRegisteredEvent.cs
+
+DEPENDÊNCIAS:
+------------
+✅ DomainEvent - Classe base com funcionalidades comuns
+✅ ApplicationUser - Entidade de usuário do sistema
+✅ System.ComponentModel.DataAnnotations - Validações
+✅ System.Text.Json - Manipulação de metadados JSON
+
+RESPONSABILIDADES:
+-----------------
+🔸 Orquestrar fluxo completo de onboarding de usuários
+🔸 Trigger de emails de boas-vindas e confirmação
+🔸 Configuração de perfis e preferências iniciais
+🔸 Integração com sistemas de CRM e analytics
+🔸 Auditoria de segurança para novos registros
+🔸 Sincronização com provedores de SSO
+
+PROPRIEDADES PRINCIPAIS:
+-----------------------
+
+1. DADOS DO USUÁRIO:
+   ✅ User (ApplicationUser) - Entidade completa do usuário
+   ✅ Informações de perfil, email e configurações
+   ✅ Dados de tenant e associações
+   ✅ Validação de consistência e integridade
+
+2. FLAGS DE COMPORTAMENTO:
+   ✅ IsInvitedUser (bool) - Registro via convite
+   ✅ IsEmailPreConfirmed (bool) - Email já confirmado (SSO)
+   ✅ RequiresEmailConfirmation - Computed property
+   ✅ RequiresOnboarding - Computed property
+
+3. CONTEXTO DE REGISTRO:
+   ✅ Context (UserRegistrationContext) - Contexto detalhado
+   ✅ Source - Origem: Web, API, Import, SSO
+   ✅ RegisteredAt - Timestamp específico
+   ✅ InvitedBy - Usuário que enviou convite
+   ✅ UserAgent, IpAddress - Dados de segurança
+   ✅ SSO Provider - Provedor de autenticação
+
+4. HERANÇA DE DOMAINEVENT:
+   ✅ Id, TenantId, UserId - Identificação
+   ✅ OccurredOn, Version - Auditoria temporal
+   ✅ CorrelationId, Metadata - Rastreabilidade
+
+CONSTRUTOR PRINCIPAL:
+--------------------
+
+🔧 UserRegisteredEvent(user, tenantId, registrationSource, invitedBy?, isEmailPreConfirmed, userAgent?, ipAddress?, correlationId?)
+   - Construção controlada com validações rigorosas
+   - Parâmetros obrigatórios: user, tenantId
+   - Context gerado automaticamente com dados de segurança
+   - Detecção automática de convites e SSO
+   - Validação de argumentos críticos
+
+VALIDAÇÕES DE NEGÓCIO:
+---------------------
+
+1. USUÁRIO:
+   ❌ User não pode ser nulo
+   ❌ User.Email não pode ser vazio
+   ❌ User.UserName não pode ser vazio
+   ❌ User.TenantId deve corresponder ao evento
+
+2. TENANT E SEGURANÇA:
+   ❌ TenantId obrigatório e não-vazio
+   ❌ Consistência User.TenantId ↔ Event.TenantId
+   ❌ RegisteredAt não pode ser no futuro
+   ❌ Dados de contexto coerentes
+
+3. EMAIL E CONFIRMAÇÃO:
+   ❌ Email deve ter formato válido
+   ❌ EmailPreConfirmed coerente com Source
+   ❌ SSO sources devem ter email confirmado
+   ❌ Convites devem ter InvitedBy válido
+
+MÉTODOS IMPLEMENTADOS:
+---------------------
+
+🔧 IsValid() : bool (override)
+   - Validação completa da estrutura
+   - Verifica consistência User ↔ Event ↔ Context
+   - Validação de regras de negócio específicas
+   - Garante integridade para processamento
+
+🔧 WithCorrelationId(Guid newCorrelationId) : DomainEvent (override)
+   - Nova instância com correlation ID
+   - Preservação de imutabilidade
+   - Suporte a distributed tracing
+   - Manutenção de todos os dados
+
+🔧 WithMetadata(string additionalMetadata) : DomainEvent (override)
+   - Merge inteligente de metadados JSON
+   - Enriquecimento de contexto
+   - Extensibilidade para integrações
+   - Tratamento de erro gracioso
+
+🔧 ToString() : string (override)
+   - Logging estruturado para auditoria
+   - Informações essenciais do usuário
+   - Contexto de registro incluído
+   - Dados de segurança mascarados
+
+PROPRIEDADES COMPUTADAS:
+------------------------
+
+🔧 RequiresEmailConfirmation
+   - Lógica: !IsEmailPreConfirmed && !Context.IsSSO
+   - Determina necessidade de email de confirmação
+   - Influencia fluxo de onboarding
+   - Base para conditional workflows
+
+🔧 RequiresOnboarding
+   - Lógica: !IsInvitedUser || Context.Source != "SSO"
+   - Define necessidade de tour/configuração inicial
+   - Controla apresentação de wizards
+   - Personalização de experiência
+
+CONTEXT CLASS - USERREGISTRATIONCONTEXT:
+----------------------------------------
+
+📋 PROPRIEDADES BASE:
+   ✅ Source - Web, API, Import, SSO
+   ✅ RegisteredAt - Timestamp específico
+   ✅ InvitedBy - ID do usuário que convidou
+   ✅ UserAgent - String do navegador/app
+   ✅ IpAddress - Endereço IP de origem
+   ✅ IsSSO - Flag de Single Sign-On
+   ✅ SSOProvider - Google, Microsoft, etc.
+   ✅ RegistrationToken - Token único de registro
+   ✅ AdditionalData - Dados contextuais extras
+
+📋 PROPRIEDADES COMPUTADAS:
+   🔧 IsInvitedRegistration - Detecta convites
+   🔧 IsSSORegistration - Detecta SSO
+   🔧 IsApiRegistration - Detecta API calls
+   🔧 TimeSinceRegistration - Tempo decorrido
+   🔧 GetLocationInfo() - Info geográfica do IP
+
+CASOS DE USO TÍPICOS:
+--------------------
+
+1. **REGISTRO VIA WEB FORM:**
+   ```csharp
+   var evt = new UserRegisteredEvent(
+       user: newUser,
+       tenantId: "tenant-123",
+       registrationSource: "Web",
+       userAgent: "Mozilla/5.0...",
+       ipAddress: "192.168.1.100"
+   );
+   ```
+
+2. **REGISTRO VIA CONVITE:**
+   ```csharp
+   var evt = new UserRegisteredEvent(
+       user: invitedUser,
+       tenantId: tenant,
+       registrationSource: "Web",
+       invitedBy: "admin-user-id",
+       userAgent: userAgent
+   );
+   ```
+
+3. **REGISTRO VIA SSO:**
+   ```csharp
+   var evt = new UserRegisteredEvent(
+       user: ssoUser,
+       tenantId: tenant,
+       registrationSource: "SSO",
+       isEmailPreConfirmed: true,
+       correlationId: ssoCorrelationId
+   );
+   ```
+
+HANDLERS TÍPICOS:
+----------------
+
+🔧 **Welcome Email Handler:**
+   - Envia email de boas-vindas personalizado
+   - Templates diferentes por source/tenant
+   - Anexa guias e recursos úteis
+
+🔧 **Email Confirmation Handler:**
+   - Gera token de confirmação
+   - Envia email com link de ativação
+   - Configura expiração do token
+
+🔧 **Profile Setup Handler:**
+   - Cria perfil inicial padrão
+   - Configura preferências base
+   - Associa roles e permissões
+
+🔧 **Analytics Handler:**
+   - Registra métricas de conversão
+   - Alimenta funnel de onboarding
+   - Tracking de origens de registro
+
+🔧 **CRM Integration Handler:**
+   - Sincroniza com sistema CRM
+   - Cria lead ou contact
+   - Atualiza dados de marketing
+
+🔧 **Security Audit Handler:**
+   - Log de auditoria de segurança
+   - Verificação de IP suspicious
+   - Alertas para padrões anômalos
+
+EXEMPLO COMPLETO DE USO:
+-----------------------
+
+```csharp
+// 1. No Application Service
+public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, Result<string>>
+{
+    public async Task<Result<string>> Handle(RegisterUserCommand request, CancellationToken ct)
+    {
+        // Criar usuário
+        var user = new ApplicationUser
+        {
+            UserName = request.Email,
+            Email = request.Email,
+            FirstName = request.FirstName,
+            LastName = request.LastName,
+            TenantId = request.TenantId,
+            CreatedBy = "System"
+        };
+
+        var result = await _userManager.CreateAsync(user, request.Password);
+        if (!result.Succeeded)
+            return Result<string>.Failure("Falha ao criar usuário");
+
+        // Disparar evento
+        var evt = new UserRegisteredEvent(
+            user: user,
+            tenantId: request.TenantId,
+            registrationSource: "Web",
+            userAgent: request.UserAgent,
+            ipAddress: request.IpAddress
+        );
+
+        await _mediator.Publish(evt, ct);
+        
+        return Result<string>.Success(user.Id);
+    }
+}
+
+// 2. Handler para Email de Boas-vindas
+public class UserRegisteredWelcomeEmailHandler : INotificationHandler<UserRegisteredEvent>
+{
+    private readonly IEmailService _emailService;
+    private readonly ITenantService _tenantService;
+
+    public async Task Handle(UserRegisteredEvent notification, CancellationToken ct)
+    {
+        var user = notification.User;
+        var tenant = await _tenantService.GetByIdAsync(user.TenantId);
+        
+        var emailModel = new WelcomeEmailModel
+        {
+            UserName = user.FirstName ?? user.UserName,
+            TenantName = tenant.DisplayName,
+            IsInvitedUser = notification.IsInvitedUser,
+            RequiresEmailConfirmation = notification.RequiresEmailConfirmation,
+            DashboardUrl = $"https://{tenant.CustomDomain}/dashboard"
+        };
+
+        await _emailService.SendWelcomeEmailAsync(user.Email, emailModel, ct);
+    }
+}
+
+// 3. Handler para Configuração de Perfil
+public class UserRegisteredProfileSetupHandler : INotificationHandler<UserRegisteredEvent>
+{
+    public async Task Handle(UserRegisteredEvent notification, CancellationToken ct)
+    {
+        var user = notification.User;
+        
+        // Configurar preferências padrão baseadas no tenant
+        var tenant = await _tenantService.GetByIdAsync(user.TenantId);
+        
+        user.UpdatePreferences(
+            timeZone: tenant.TimeZone ?? "UTC",
+            language: tenant.Language ?? "en-US",
+            notificationPrefs: GetDefaultNotificationPrefs(),
+            updatedBy: "System"
+        );
+
+        // Adicionar roles padrão
+        if (notification.IsInvitedUser)
+        {
+            await _userManager.AddToRoleAsync(user, "Member");
+        }
+        else
+        {
+            await _userManager.AddToRoleAsync(user, "Owner");
+        }
+
+        await _userRepository.UpdateAsync(user, ct);
+    }
+}
+
+// 4. Handler para Analytics
+public class UserRegisteredAnalyticsHandler : INotificationHandler<UserRegisteredEvent>
+{
+    public async Task Handle(UserRegisteredEvent notification, CancellationToken ct)
+    {
+        var metrics = new UserRegistrationMetrics
+        {
+            UserId = notification.User.Id,
+            TenantId = notification.TenantId,
+            Source = notification.Context.Source,
+            IsInvited = notification.IsInvitedUser,
+            IsSso = notification.Context.IsSSO,
+            SsoProvider = notification.Context.SSOProvider,
+            UserAgent = notification.Context.UserAgent,
+            IpAddress = notification.Context.IpAddress,
+            RegisteredAt = notification.OccurredOn
+        };
+
+        await _analyticsService.TrackUserRegistrationAsync(metrics, ct);
+        
+        // Atualizar métricas do tenant
+        await _tenantMetricsService.IncrementUserCountAsync(
+            notification.TenantId, ct);
+    }
+}
+```
+
+FLUXOS DE ONBOARDING:
+--------------------
+
+📋 **USUÁRIO NORMAL (Web):**
+   1. UserRegisteredEvent dispatched
+   2. Welcome email enviado
+   3. Email confirmation enviado
+   4. Profile setup executado
+   5. Analytics registrado
+   6. Redirect para onboarding wizard
+
+📋 **USUÁRIO CONVIDADO:**
+   1. UserRegisteredEvent dispatched
+   2. Welcome email personalizado
+   3. Profile setup com role Member
+   4. Analytics com source "Invite"
+   5. Redirect direto para dashboard
+
+📋 **USUÁRIO SSO:**
+   1. UserRegisteredEvent dispatched
+   2. Welcome email simplificado
+   3. Profile setup automático
+   4. Email já confirmado
+   5. Redirect direto para aplicação
+
+INTEGRAÇÃO COM SISTEMA:
+----------------------
+
+🔗 **Identity System:**
+   - AspNetCore Identity integration
+   - Role e claims assignment
+   - Password policies enforcement
+
+🔗 **Email Service:**
+   - Template-based emails
+   - Personalization por tenant
+   - Delivery tracking
+
+🔗 **Analytics Platform:**
+   - Conversion funnel tracking
+   - User acquisition metrics
+   - A/B testing support
+
+🔗 **CRM Integration:**
+   - Lead creation
+   - Contact synchronization
+   - Marketing automation triggers
+
+SEGURANÇA E COMPLIANCE:
+----------------------
+
+🔒 **Auditoria Completa:**
+   - IP address logging
+   - User agent tracking
+   - Registration source validation
+   - Correlation ID para compliance
+
+🔒 **Detecção de Fraude:**
+   - IP reputation checking
+   - Velocity limits por IP
+   - Pattern analysis
+   - Suspicious activity alerts
+
+🔒 **LGPD/GDPR Compliance:**
+   - Consent tracking
+   - Data minimization
+   - Right to erasure support
+   - Lawful basis documentation
+
+MONITORAMENTO E MÉTRICAS:
+------------------------
+
+📊 **Registration Metrics:**
+   - Taxa de conversão por source
+   - Tempo médio de onboarding
+   - Email confirmation rates
+   - User activation rates
+
+📊 **Security Metrics:**
+   - Failed registration attempts
+   - Suspicious IP addresses
+   - Bot detection rates
+   - Account takeover attempts
+
+📊 **Business Metrics:**
+   - User acquisition cost
+   - Lifetime value prediction
+   - Churn prediction
+   - Feature adoption rates
+
+TROUBLESHOOTING:
+---------------
+
+🔍 **Emails não enviados:**
+   - Verificar handlers de email registrados
+   - Checar configuração SMTP/SendGrid
+   - Validar templates de email
+   - Monitorar bounce rates
+
+🔍 **Usuários não ativados:**
+   - Verificar fluxo de email confirmation
+   - Checar tokens de ativação
+   - Validar links de confirmação
+   - Monitorar spam folders
+
+🔍 **SSO não funcionando:**
+   - Verificar configuração de providers
+   - Checar mapeamento de claims
+   - Validar redirect URLs
+   - Monitorar token validation
+
+EXTENSÕES FUTURAS:
+-----------------
+
+🔮 User Email Confirmed Event
+🔮 User Profile Completed Event
+🔮 User First Login Event
+🔮 User Invited Event
+🔮 User Activation Reminder Event
+🔮 User Onboarding Completed Event
+
+VERSIONAMENTO:
+-------------
+
+📋 Versão: 2.0.0
+📋 Última Atualização: 2024
+📋 Compatibilidade: .NET 8+ / Identity 8+
+📋 Status: Produção
+
+AUTOR & RESPONSÁVEL:
+-------------------
+
+👨‍💻 Desenvolvido por: Equipe AuthTenant
+👨‍💻 Mantido por: Time de Identity
+📧 Contato: identity@AuthTenant.com
+
+=========================================================

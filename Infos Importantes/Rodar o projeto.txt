@@ -1,0 +1,2 @@
+Dentro de C:\Users\Carlos Henrique\Desktop\PROJETOSNOVOS\AcademiaCrawler\Backend\AuthTenant\AuthTenant.API>
+Rodar o comando .\run-with-browser.ps1

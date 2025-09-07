@@ -1,0 +1,359 @@
+=========================================================
+APPLICATIONUSER.CS - DOCUMENTAÇÃO TÉCNICA
+=========================================================
+
+VISÃO GERAL:
+-----------
+Extensão personalizada do IdentityUser do ASP.NET Core para sistema multi-tenant.
+Implementa funcionalidades de domínio para gestão de usuários, perfis e segurança.
+Integra autenticação/autorização com regras de negócio específicas do domínio.
+
+LOCALIZAÇÃO:
+-----------
+📁 AuthTenant.Domain/Entities/ApplicationUser.cs
+
+DEPENDÊNCIAS:
+------------
+✅ Microsoft.AspNetCore.Identity.IdentityUser - Herança de identidade
+✅ System.ComponentModel.DataAnnotations - Validações de dados
+✅ System.ComponentModel.DataAnnotations.Schema - Mapeamento de banco
+✅ BusinessRuleException - Exceções de regras de negócio
+✅ Tenant - Navegação para inquilino
+
+RESPONSABILIDADES:
+-----------------
+🔸 Extensão do sistema de identidade padrão
+🔸 Gestão de perfis de usuário e informações pessoais
+🔸 Controle de acesso e permissões multi-tenant
+🔸 Tracking de atividades e sessões de usuário
+🔸 Gestão de configurações e preferências
+🔸 Auditoria de segurança e compliance
+
+PROPRIEDADES PRINCIPAIS:
+-----------------------
+
+1. INFORMAÇÕES PESSOAIS:
+   ✅ FirstName (string?) - Nome do usuário
+   ✅ LastName (string?) - Sobrenome do usuário
+   ✅ ProfileImageUrl (string?) - URL da foto de perfil
+   ✅ DateOfBirth (DateTime?) - Data de nascimento opcional
+   ✅ Validações de comprimento e formato
+
+2. MULTI-TENANCY:
+   ✅ TenantId (string) - Identificador do inquilino (obrigatório)
+   ✅ Tenant (navegação) - Referência para entidade Tenant
+   ✅ Isolamento de dados por inquilino
+   ✅ Controle de acesso baseado em tenant
+
+3. CONFIGURAÇÕES DE CONTA:
+   ✅ IsActive (bool) - Status de ativação da conta
+   ✅ IsDeleted (bool) - Soft delete para auditoria
+   ✅ TimeZone (string?) - Fuso horário preferido
+   ✅ Language (string?) - Idioma de interface preferido
+   ✅ NotificationPreferences (JSON string) - Preferências de notificação
+
+4. TRACKING DE ATIVIDADE:
+   ✅ LastLoginAt (DateTime?) - Último login realizado
+   ✅ LoginCount (int) - Contador total de logins
+   ✅ FailedLoginAttempts (int) - Tentativas de login falhadas
+   ✅ LastFailedLoginAt (DateTime?) - Último login falhado
+   ✅ IsLockedOut (bool) - Status de bloqueio por segurança
+
+5. AUDITORIA PERSONALIZADA:
+   ✅ CreatedAt (DateTime) - Data/hora de criação
+   ✅ CreatedBy (string?) - Usuário que criou a conta
+   ✅ UpdatedAt (DateTime?) - Última atualização
+   ✅ UpdatedBy (string?) - Usuário que fez a última atualização
+   ✅ DeletedAt (DateTime?) - Data/hora de exclusão (soft delete)
+   ✅ DeletedBy (string?) - Usuário que excluiu
+
+PROPRIEDADES COMPUTADAS:
+------------------------
+
+🔧 FullName
+   - Concatenação inteligente de FirstName + LastName
+   - Retorna Username se nomes não disponíveis
+   - Formatação consistente
+
+🔧 DisplayName
+   - Nome para exibição em interfaces
+   - Prioriza FullName, fallback para Email
+   - Sempre retorna valor não-nulo
+
+🔧 Initials
+   - Iniciais do usuário para avatares
+   - Baseado em FirstName e LastName
+   - Fallback para primeiros 2 caracteres do Username
+
+🔧 Age
+   - Idade calculada a partir de DateOfBirth
+   - Considera ano bissexto e datas futuras
+   - Null se data não informada
+
+🔧 IsAccountLocked
+   - Status de bloqueio considerando multiple fatores
+   - Combina IsLockedOut, IsActive e IsDeleted
+   - Lógica centralizada de acesso
+
+🔧 AccountStatus
+   - Status descritivo para interfaces
+   - Estados: Active, Inactive, Locked, Deleted, Pending Confirmation
+
+🔧 DaysSinceLastLogin
+   - Dias desde último login para métricas
+   - Útil para identificar usuários inativos
+   - Null se nunca fez login
+
+MÉTODOS DE DOMÍNIO - GESTÃO DE CONTA:
+------------------------------------
+
+🔧 Activate(string? activatedBy)
+   - Ativação segura de conta de usuário
+   - Validação de estado antes da ativação
+   - Auditoria automática de mudanças
+   - Reset de contadores de falha
+
+🔧 Deactivate(string? deactivatedBy)
+   - Desativação controlada de conta
+   - Manutenção de dados para auditoria
+   - Prevenção de login sem exclusão
+   - Registro de responsável pela ação
+
+🔧 MarkAsDeleted(string? deletedBy)
+   - Soft delete com preservação de dados
+   - Invalidação imediata de sessões
+   - Auditoria completa da exclusão
+   - Manutenção de integridade referencial
+
+MÉTODOS DE DOMÍNIO - SEGURANÇA:
+------------------------------
+
+🔧 RecordSuccessfulLogin()
+   - Registro de login bem-sucedido
+   - Reset de contadores de falha
+   - Atualização de timestamp de último acesso
+   - Incremento de estatísticas de uso
+
+🔧 RecordFailedLoginAttempt()
+   - Tracking de tentativas de login falhadas
+   - Incremento de contador de falhas
+   - Timestamp de última tentativa falhada
+   - Base para implementação de rate limiting
+
+🔧 LockAccount(string? lockedBy)
+   - Bloqueio manual ou automático de conta
+   - Prevenção de acesso até desbloqueio
+   - Auditoria de motivo do bloqueio
+   - Integração com sistema de segurança
+
+🔧 UnlockAccount(string? unlockedBy)
+   - Desbloqueio controlado de conta
+   - Reset de contadores de falha
+   - Validação de permissões para desbloqueio
+   - Auditoria de liberação de acesso
+
+MÉTODOS DE DOMÍNIO - PERFIL:
+---------------------------
+
+🔧 UpdateProfile(string? firstName, string? lastName, DateTime? dateOfBirth, string? updatedBy)
+   - Atualização segura de informações pessoais
+   - Validação de dados de entrada
+   - Preservação de histórico via auditoria
+   - Controle de permissões de edição
+
+🔧 UpdateProfileImage(string? imageUrl, string? updatedBy)
+   - Gestão de foto de perfil
+   - Validação de URL e formato
+   - Limpeza de referências antigas
+   - Integração com storage de imagens
+
+🔧 UpdatePreferences(string? timeZone, string? language, string? notificationPrefs, string? updatedBy)
+   - Configuração de preferências pessoais
+   - Validação de valores permitidos
+   - Aplicação imediata de configurações
+   - Suporte a localização
+
+🔧 ChangeTenant(string newTenantId, string? changedBy)
+   - Migração segura entre inquilinos
+   - Validação de permissões de acesso
+   - Limpeza de dados específicos do tenant anterior
+   - Auditoria de mudança de contexto
+
+VALIDAÇÕES DE NEGÓCIO:
+---------------------
+
+1. INFORMAÇÕES PESSOAIS:
+   ❌ FirstName/LastName: 1-100 caracteres se fornecidos
+   ❌ Apenas letras, espaços, hífens e apostrofes
+   ❌ Não podem ser apenas espaços em branco
+   ❌ ProfileImageUrl deve ser URL válida se fornecida
+
+2. MULTI-TENANCY:
+   ❌ TenantId obrigatório e não-vazio
+   ❌ Formato GUID válido
+   ❌ Tenant deve existir no sistema
+   ❌ Usuário deve ter permissão de acesso ao tenant
+
+3. CONFIGURAÇÕES:
+   ❌ TimeZone deve ser válido (se fornecido)
+   ❌ Language deve seguir padrão ISO (ex: pt-BR, en-US)
+   ❌ NotificationPreferences deve ser JSON válido
+   ❌ Configurações dentro de limites permitidos
+
+4. SEGURANÇA:
+   ❌ FailedLoginAttempts não pode ser negativo
+   ❌ LoginCount não pode ser negativo
+   ❌ Datas de auditoria devem ser coerentes
+   ❌ IsActive não pode ser true se IsDeleted for true
+
+CONSTANTES DE VALIDAÇÃO:
+-----------------------
+📊 MAX_NAME_LENGTH = 100 caracteres
+📊 MAX_URL_LENGTH = 500 caracteres
+📊 MAX_TIMEZONE_LENGTH = 50 caracteres
+📊 MAX_LANGUAGE_LENGTH = 10 caracteres
+📊 MAX_NOTIFICATION_PREFS_LENGTH = 2000 caracteres
+📊 MAX_FAILED_ATTEMPTS = 10 (sugestão para rate limiting)
+📊 MAX_AGE = 150 anos (validação de sanidade)
+
+FUNCIONALIDADES DE SEGURANÇA:
+-----------------------------
+🔒 Soft delete para preservação de auditoria
+🔒 Tracking de tentativas de login falhadas
+🔒 Bloqueio automático por segurança
+🔒 Validação de integridade de dados
+🔒 Proteção contra ataques de enumeração
+🔒 Auditoria completa de mudanças
+
+PADRÕES ARQUITETURAIS:
+---------------------
+🏗️ Active Record Pattern - Entidade com comportamentos
+🏗️ Strategy Pattern - Diferentes tipos de usuário
+🏗️ Observer Pattern - Notificações de mudanças
+🏗️ Template Method - Validações personalizáveis
+🏗️ Factory Pattern - Criação controlada
+🏗️ Repository Pattern - Persistência abstraída
+
+INTEGRAÇÃO COM SISTEMA:
+----------------------
+🔗 ASP.NET Core Identity - Sistema de autenticação
+🔗 Entity Framework - Mapeamento ORM
+🔗 JWT Token Service - Geração de tokens
+🔗 Email Service - Notificações e confirmações
+🔗 Audit Service - Tracking de mudanças
+🔗 Tenant Service - Gestão multi-tenant
+
+CENÁRIOS DE USO:
+---------------
+✅ Registro de novos usuários
+✅ Login e autenticação
+✅ Gestão de perfis pessoais
+✅ Controle de acesso multi-tenant
+✅ Tracking de atividades de usuário
+✅ Bloqueio/desbloqueio por segurança
+✅ Migração entre inquilinos
+✅ Configuração de preferências
+
+PERFORMANCE:
+-----------
+⚡ Propriedades computadas calculadas sob demanda
+⚡ Lazy loading de navegação para Tenant
+⚡ Indexação otimizada (TenantId, Email, IsActive)
+⚡ Consultas otimizadas com filtros eficientes
+⚡ Cache de dados de sessão
+
+MANUTENÇÃO:
+----------
+🔧 Extensibilidade via herança de IdentityUser
+🔧 Configurações flexíveis via JSON
+🔧 Logs estruturados para debugging
+🔧 Migração de dados simplificada
+🔧 Evolução compatível de esquema
+
+CONSIDERAÇÕES DE COMPLIANCE:
+---------------------------
+⚠️ LGPD/GDPR - Direito ao esquecimento
+⚠️ Consentimento para dados pessoais
+⚠️ Criptografia de dados sensíveis
+⚠️ Retention policy para logs
+⚠️ Anonymização para analytics
+⚠️ Audit trail para compliance
+
+EXEMPLO DE USO:
+--------------
+```csharp
+// Criação de usuário
+var user = new ApplicationUser
+{
+    UserName = "usuario@exemplo.com",
+    Email = "usuario@exemplo.com",
+    TenantId = "tenant-guid",
+    FirstName = "João",
+    LastName = "Silva",
+    CreatedBy = "admin"
+};
+
+// Configuração de perfil
+user.UpdateProfile("João", "Silva Santos", 
+    new DateTime(1990, 5, 15), "self");
+user.UpdatePreferences("America/Sao_Paulo", "pt-BR", 
+    "{\"email\": true, \"sms\": false}", "self");
+
+// Gestão de segurança
+user.RecordSuccessfulLogin();
+if (user.FailedLoginAttempts > 5)
+{
+    user.LockAccount("security-system");
+}
+
+// Analytics
+var daysSinceLogin = user.DaysSinceLastLogin;
+var isInactive = daysSinceLogin > 30;
+var accountStatus = user.AccountStatus;
+
+// Validações
+var isValid = user.IsAccountLocked == false && user.IsActive;
+var displayInfo = $"{user.DisplayName} ({user.Initials})";
+```
+
+EVENTOS DE DOMÍNIO (FUTURO):
+---------------------------
+🔮 UserRegistered - Novo usuário registrado
+🔮 UserActivated - Usuário ativado
+🔮 UserLoggedIn - Login realizado
+🔮 UserProfileUpdated - Perfil atualizado
+🔮 UserTenantChanged - Mudança de inquilino
+🔮 UserAccountLocked - Conta bloqueada
+
+MÉTRICAS E ANALYTICS:
+--------------------
+📊 Taxa de ativação de usuários
+📊 Frequência de login por tenant
+📊 Tempo médio entre logins
+📊 Tentativas de login falhadas
+📊 Usuários inativos por período
+📊 Migração entre tenants
+
+EXTENSÕES FUTURAS:
+-----------------
+🔮 Two-Factor Authentication - 2FA completo
+🔮 Social Login - Login com redes sociais
+🔮 Role-Based Access - Gestão de papéis
+🔮 Session Management - Controle de sessões
+🔮 Password Policy - Políticas de senha
+🔮 Device Management - Gestão de dispositivos
+
+VERSIONAMENTO:
+-------------
+📋 Versão: 2.0.0
+📋 Última Atualização: 2024
+📋 Compatibilidade: .NET 8+ / Identity 8+
+📋 Status: Produção
+
+AUTOR & RESPONSÁVEL:
+-------------------
+👨‍💻 Desenvolvido por: Equipe AuthTenant
+👨‍💻 Mantido por: Time de Segurança
+📧 Contato: security@AuthTenant.com
+
+=========================================================

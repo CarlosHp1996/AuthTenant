@@ -1,0 +1,230 @@
+# ProductDto.cs - Documentação Técnica
+
+## 📋 Visão Geral
+O `ProductDto` é um Data Transfer Object robusto e feature-rich para representação de produtos em operações de leitura. Implementa validação avançada, propriedades computadas inteligentes, auditoria completa e suporte a metadados extensíveis para um sistema multi-tenant.
+
+## 🏗️ Arquitetura e Design
+
+### Padrões Implementados
+- **Data Transfer Object (DTO)**: Transferência segura de dados entre camadas
+- **Value Object**: Propriedades computadas imutáveis
+- **Decorator Pattern**: Formatação inteligente de dados
+- **Builder Pattern**: Métodos factory para testing
+- **Validation Pattern**: Validação multicamada
+
+### Princípios SOLID
+- **SRP**: Classe focada apenas em representação de produto
+- **OCP**: Extensível via metadata sem modificar código base
+- **LSP**: Substituível por outros DTOs de produto
+- **ISP**: Interface específica para produto com propriedades relevantes
+- **DIP**: Independente de implementações específicas
+
+## 🔧 Principais Funcionalidades
+
+### Propriedades Base
+```csharp
+public Guid Id { get; set; }                    // Identificador único
+public string Name { get; set; }                // Nome do produto
+public string? Description { get; set; }        // Descrição detalhada
+public decimal Price { get; set; }              // Preço atual
+public string? SKU { get; set; }                // Código SKU
+public int StockQuantity { get; set; }          // Quantidade em estoque
+public bool IsActive { get; set; }              // Status ativo/inativo
+```
+
+### Propriedades Computadas Inteligentes
+```csharp
+public string FormattedPrice                    // Preço formatado com moeda
+public bool InStock                             // Indica se há estoque
+public string StockStatus                       // Status descritivo do estoque
+public bool IsNew                               // Produto criado recentemente
+public bool RecentlyUpdated                     // Produto atualizado recentemente
+public string DisplayName                       // Nome para exibição
+```
+
+### Auditoria e Rastreamento
+```csharp
+public DateTime CreatedAt { get; set; }         // Data de criação
+public DateTime? UpdatedAt { get; set; }        // Data de última atualização
+public string? CreatedBy { get; set; }          // Usuário criador
+public string? UpdatedBy { get; set; }          // Último usuário que atualizou
+```
+
+### Organização e Metadados
+```csharp
+public IList<string> Categories { get; set; }   // Categorias do produto
+public IList<string> Tags { get; set; }         // Tags para busca
+public IDictionary<string, string>? Metadata    // Metadados extensíveis
+```
+
+## ✅ Validação e Regras de Negócio
+
+### Validação de Entrada
+- **Nome**: Obrigatório, 2-200 caracteres, conteúdo significativo
+- **Preço**: Obrigatório, maior que 0
+- **Descrição**: Opcional, máximo 2000 caracteres
+- **SKU**: Opcional, formato alfanumérico, máximo 50 caracteres
+- **Estoque**: Não negativo
+- **Categorias**: Máximo 10, cada uma com até 100 caracteres
+- **Tags**: Máximo 20, cada uma com até 50 caracteres
+
+### Lógica de Negócio
+```csharp
+// Verifica se produto é novo (criado há menos de 7 dias)
+IsNew = CreatedAt > DateTime.UtcNow.AddDays(-7)
+
+// Verifica se foi atualizado recentemente (menos de 24h)
+RecentlyUpdated = UpdatedAt.HasValue && UpdatedAt > DateTime.UtcNow.AddHours(-24)
+
+// Status de estoque baseado em quantidade e nível mínimo
+StockStatus = StockQuantity > MinimumStockLevel ? "In Stock" : 
+              StockQuantity > 0 ? "Low Stock" : "Out of Stock"
+```
+
+## 🔒 Segurança e Multi-Tenancy
+
+### Isolamento de Dados
+- Todos os produtos são isolados por tenant automaticamente
+- IDs únicos previnem vazamento de dados entre tenants
+- Validação de SKU por tenant
+
+### Sanitização
+```csharp
+public void Sanitize()
+{
+    Name = Name?.Trim() ?? string.Empty;
+    Description = string.IsNullOrWhiteSpace(Description) ? null : Description.Trim();
+    SKU = string.IsNullOrWhiteSpace(SKU) ? null : SKU.Trim().ToUpperInvariant();
+    
+    // Limpa e normaliza categorias/tags
+    Categories = Categories?.Where(c => !string.IsNullOrWhiteSpace(c))
+                          .Select(c => c.Trim())
+                          .Distinct()
+                          .ToList() ?? new List<string>();
+}
+```
+
+## 📊 Performance e Otimização
+
+### Propriedades Lazy
+- Propriedades computadas são calculadas sob demanda
+- Formatação de preço otimizada para cultura atual
+- Normalização inteligente de strings
+
+### Serialização JSON
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Premium Wireless Headphones",
+  "formattedPrice": "$299.99",
+  "inStock": true,
+  "stockStatus": "In Stock",
+  "isNew": true,
+  "categories": ["Electronics", "Audio"],
+  "tags": ["wireless", "premium", "noise-cancelling"]
+}
+```
+
+## 🧪 Testabilidade
+
+### Factory Methods
+```csharp
+// Para testes unitários
+var productDto = ProductDto.CreateForTesting("Test Product", 99.99m);
+
+// Para testes de integração
+var productDto = ProductDto.CreateWithAudit("Test Product", 99.99m, "test-user");
+```
+
+### Métodos de Validação
+```csharp
+bool isValid = productDto.IsValid();
+var errors = productDto.GetValidationErrors();
+bool hasMinimalInfo = productDto.HasMinimalRequiredInfo;
+```
+
+## 🔄 Integração com Sistema
+
+### AutoMapper Profile
+```csharp
+CreateMap<Product, ProductDto>()
+    .ForMember(dest => dest.FormattedPrice, opt => opt.Ignore())
+    .ForMember(dest => dest.InStock, opt => opt.Ignore())
+    .ForMember(dest => dest.StockStatus, opt => opt.Ignore());
+```
+
+### Uso em Controllers
+```csharp
+[HttpGet("{id}")]
+public async Task<ActionResult<Result<ProductDto>>> GetProduct(Guid id)
+{
+    var result = await _mediator.Send(new GetProductQuery { Id = id });
+    return Ok(result);
+}
+```
+
+## 🔍 Padrões de Busca e Filtragem
+
+### Propriedades Normalizadas
+- `NormalizedName`: Para busca case-insensitive
+- `NormalizedSKU`: Para comparação de SKU
+- `SearchableContent`: Combina nome, descrição e tags
+
+### Suporte a Filtros
+- Por categoria, tags, faixa de preço
+- Por status de estoque
+- Por data de criação/atualização
+- Por status ativo/inativo
+
+## 📈 Melhorias Implementadas
+
+### Antes da Refatoração
+- Classe simples com propriedades básicas
+- Validação limitada via Data Annotations
+- Sem propriedades computadas
+- Sem suporte a auditoria
+- Sem organização (categorias/tags)
+
+### Após a Refatoração
+- ✅ Propriedades computadas inteligentes
+- ✅ Validação robusta multicamada
+- ✅ Auditoria completa
+- ✅ Suporte a metadados extensíveis
+- ✅ Organização via categorias e tags
+- ✅ Formatação automática
+- ✅ Métodos de testing
+- ✅ Documentação XML completa
+- ✅ Sanitização de dados
+- ✅ Performance otimizada
+
+## 🛠️ Manutenção e Evolução
+
+### Extensibilidade
+- Metadados personalizados via `Metadata` dictionary
+- Propriedades computadas podem ser facilmente adicionadas
+- Validação extensível via métodos virtuais
+
+### Versionamento
+- Compatibilidade com versões anteriores via propriedades opcionais
+- Suporte a migração de dados via factory methods
+- Serialização controlada via JsonPropertyName
+
+## 📚 Casos de Uso
+
+### Principais Cenários
+1. **Listagem de Produtos**: Exibição em catálogos e grids
+2. **Detalhes de Produto**: Página de produto individual
+3. **APIs REST**: Resposta padronizada para clientes
+4. **Cache**: Representação serializable para cache
+5. **Relatórios**: Dados formatados para exportação
+6. **Integração**: Troca de dados com sistemas externos
+
+### Benefícios Alcançados
+- **Consistência**: Representação uniforme de produtos
+- **Performance**: Propriedades computadas otimizadas
+- **Manutenibilidade**: Código limpo e bem documentado
+- **Testabilidade**: Factory methods e validação testável
+- **Segurança**: Validação e sanitização robusta
+- **Flexibilidade**: Extensível via metadados
+
+Esta implementação representa um DTO moderno, robusto e enterprise-ready para gerenciamento de produtos em um sistema multi-tenant.

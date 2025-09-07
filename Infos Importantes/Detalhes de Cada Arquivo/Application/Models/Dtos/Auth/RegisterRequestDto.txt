@@ -1,0 +1,616 @@
+# RegisterRequestDto.cs - DTO de Requisição de Registro
+
+## 📋 Visão Geral
+DTO abrangente para requisições de registro de usuário em ambiente multi-tenant. Implementa validações rigorosas, verificações de segurança, compliance regulatório e suporte a auditoria completa para garantir registro seguro e em conformidade.
+
+## 🏗️ Arquitetura e Estrutura
+
+### Classe Selada
+```csharp
+public sealed class RegisterRequestDto
+```
+- **Sealed**: Previne herança para manter controle total
+- **Comprehensive Validation**: Validações abrangentes para registro
+- **Multi-Tenant Ready**: Suporte nativo à arquitetura multi-tenant
+- **Compliance Focused**: Foco em conformidade regulatória
+
+## 🔐 Informações de Autenticação
+
+### Email do Usuário
+```csharp
+[Required(ErrorMessage = "Email address is required")]
+[EmailAddress(ErrorMessage = "Please provide a valid email address")]
+[StringLength(256, ErrorMessage = "Email address cannot exceed 256 characters")]
+[JsonPropertyName("email")]
+public string Email { get; set; } = string.Empty;
+```
+- **Primary Identifier**: Identificador único dentro do tenant
+- **RFC Compliant**: Validação segundo padrões RFC
+- **Case Insensitive**: Processado em lowercase normalizado
+- **Uniqueness**: Deve ser único no escopo do tenant
+
+### Sistema de Senhas
+```csharp
+[Required(ErrorMessage = "Password is required")]
+[StringLength(128, MinimumLength = 8, ErrorMessage = "Password must be between 8 and 128 characters")]
+[DataType(DataType.Password)]
+[JsonPropertyName("password")]
+public string Password { get; set; } = string.Empty;
+
+[Required(ErrorMessage = "Password confirmation is required")]
+[DataType(DataType.Password)]
+[Compare(nameof(Password), ErrorMessage = "Password and confirmation do not match")]
+[JsonPropertyName("confirmPassword")]
+public string ConfirmPassword { get; set; } = string.Empty;
+```
+- **Strength Requirements**: Validação de força da senha
+- **Confirmation**: Confirmação obrigatória para prevenir erros
+- **Security**: Nunca armazenadas em plain text
+- **Complexity**: Verificação de complexidade implementada
+
+## 👤 Informações Pessoais
+
+### Dados Nominais
+```csharp
+[Required(ErrorMessage = "First name is required")]
+[StringLength(50, MinimumLength = 1, ErrorMessage = "First name must be between 1 and 50 characters")]
+[RegularExpression(@"^[a-zA-ZÀ-ÿ\s\-'\.]+$", ErrorMessage = "First name contains invalid characters")]
+[JsonPropertyName("firstName")]
+public string FirstName { get; set; } = string.Empty;
+
+[Required(ErrorMessage = "Last name is required")]
+[StringLength(50, MinimumLength = 1, ErrorMessage = "Last name must be between 1 and 50 characters")]
+[RegularExpression(@"^[a-zA-ZÀ-ÿ\s\-'\.]+$", ErrorMessage = "Last name contains invalid characters")]
+[JsonPropertyName("lastName")]
+public string LastName { get; set; } = string.Empty;
+```
+- **Character Validation**: Apenas caracteres válidos para nomes
+- **Unicode Support**: Suporte a caracteres acentuados
+- **Length Limits**: Limites apropriados para nomes
+- **Special Characters**: Permite hífens, apostrofes e pontos
+
+### Identificação do Tenant
+```csharp
+[Required(ErrorMessage = "Tenant ID is required")]
+[StringLength(50, MinimumLength = 1, ErrorMessage = "Tenant ID must be between 1 and 50 characters")]
+[JsonPropertyName("tenantId")]
+public string TenantId { get; set; } = string.Empty;
+```
+- **Multi-Tenancy**: Essencial para isolamento de dados
+- **Validation**: Formato validado para segurança
+- **Organization**: Define a organização do usuário
+
+## 📞 Informações de Contato Opcionais
+
+### Telefone
+```csharp
+[Phone(ErrorMessage = "Please provide a valid phone number")]
+[StringLength(20)]
+[JsonPropertyName("phoneNumber")]
+public string? PhoneNumber { get; set; }
+```
+- **Optional**: Campo opcional para verificação adicional
+- **Format Validation**: Validação de formato de telefone
+- **2FA Ready**: Preparado para autenticação de dois fatores
+
+## 🌐 Preferências de Localização
+
+### Idioma e Timezone
+```csharp
+[StringLength(10)]
+[JsonPropertyName("preferredLanguage")]
+public string? PreferredLanguage { get; set; } = "en-US";
+
+[StringLength(50)]
+[JsonPropertyName("timezone")]
+public string? Timezone { get; set; }
+```
+- **Localization**: Suporte à localização
+- **User Experience**: Melhora experiência do usuário
+- **Default Values**: Valores padrão apropriados
+
+## ⚖️ Compliance e Termos
+
+### Aceitação de Termos
+```csharp
+[Range(typeof(bool), "true", "true", ErrorMessage = "You must accept the terms of service")]
+[JsonPropertyName("acceptTerms")]
+public bool AcceptTerms { get; set; } = false;
+```
+- **Legal Requirement**: Obrigatório para compliance
+- **Audit Trail**: Rastreado para fins legais
+- **Validation**: Deve ser explicitamente true
+
+### Preferências de Marketing
+```csharp
+[JsonPropertyName("marketingOptIn")]
+public bool MarketingOptIn { get; set; } = false;
+```
+- **GDPR Compliant**: Opt-in explícito para marketing
+- **Privacy**: Respeita privacidade do usuário
+- **Default**: Padrão false para proteção
+
+## 📊 Analytics e Tracking
+
+### Fonte de Registro
+```csharp
+[StringLength(50)]
+[JsonPropertyName("registrationSource")]
+public string? RegistrationSource { get; set; }
+```
+- **Analytics**: Tracking de origem dos usuários
+- **Marketing**: Análise de efetividade de campanhas
+- **Optional**: Não obrigatório para funcionamento
+
+### Metadados Extensíveis
+```csharp
+[JsonPropertyName("metadata")]
+public IDictionary<string, string>? Metadata { get; set; }
+```
+- **Flexible**: Dados adicionais conforme necessário
+- **Tracking**: Códigos de referência, campanhas, etc.
+- **Extensible**: Preparado para futuras necessidades
+
+## 🧠 Propriedades Computadas
+
+### Email Normalizado
+```csharp
+[JsonIgnore]
+public string NormalizedEmail => Email.Trim().ToLowerInvariant();
+```
+- **Database Consistency**: Busca consistente no banco
+- **Case Insensitive**: Remove diferenças de capitalização
+- **Whitespace**: Remove espaços desnecessários
+
+### Nome Completo
+```csharp
+[JsonIgnore]
+public string FullName => $"{FirstName.Trim()} {LastName.Trim()}".Trim();
+```
+- **Display Purpose**: Para exibição na interface
+- **Formatting**: Formatação consistente
+- **Trimmed**: Remove espaços extras
+
+### Força da Senha
+```csharp
+[JsonIgnore]
+public bool HasStrongPassword => IsStrongPassword(Password);
+```
+- **Security Assessment**: Avaliação de segurança
+- **Complexity Check**: Verificação de complexidade
+- **Real-time**: Pode ser usado para feedback em tempo real
+
+## ✅ Sistema de Validação Avançado
+
+### Validação Completa
+```csharp
+public bool IsValid()
+{
+    return !string.IsNullOrWhiteSpace(Email) &&
+           !string.IsNullOrWhiteSpace(Password) &&
+           !string.IsNullOrWhiteSpace(FirstName) &&
+           !string.IsNullOrWhiteSpace(LastName) &&
+           !string.IsNullOrWhiteSpace(TenantId) &&
+           Password == ConfirmPassword &&
+           AcceptTerms &&
+           IsValidEmail(Email) &&
+           IsStrongPassword(Password) &&
+           IsValidName(FirstName) &&
+           IsValidName(LastName) &&
+           IsValidTenantId(TenantId);
+}
+```
+- **Comprehensive**: Validação completa de todos os campos
+- **Business Rules**: Aplica regras de negócio específicas
+- **Security**: Verifica requisitos de segurança
+
+### Validação de Email Avançada
+```csharp
+private static bool IsValidEmail(string email)
+{
+    if (string.IsNullOrWhiteSpace(email) || email.Length > 256)
+        return false;
+
+    try
+    {
+        var addr = new System.Net.Mail.MailAddress(email);
+        return addr.Address == email && !email.Contains("..");
+    }
+    catch
+    {
+        return false;
+    }
+}
+```
+- **Double Dot Check**: Previne emails com pontos duplos
+- **Framework Validation**: Usa validação do .NET
+- **Exception Safe**: Não propaga exceções
+
+### Validação de Senha Forte
+```csharp
+private static bool IsStrongPassword(string password)
+{
+    if (string.IsNullOrWhiteSpace(password) || password.Length < 8 || password.Length > 128)
+        return false;
+
+    // Check for at least 3 of 4 character types
+    var hasLower = password.Any(char.IsLower);
+    var hasUpper = password.Any(char.IsUpper);
+    var hasDigit = password.Any(char.IsDigit);
+    var hasSpecial = password.Any(c => !char.IsLetterOrDigit(c));
+
+    var complexityScore = (hasLower ? 1 : 0) + (hasUpper ? 1 : 0) + (hasDigit ? 1 : 0) + (hasSpecial ? 1 : 0);
+    
+    return complexityScore >= 3 && !IsCommonPassword(password);
+}
+```
+- **Character Diversity**: Requer 3 de 4 tipos de caracteres
+- **Common Password Check**: Previne senhas comuns
+- **Complexity Score**: Sistema de pontuação de complexidade
+
+### Validação de Senhas Comuns
+```csharp
+private static bool IsCommonPassword(string password)
+{
+    var commonPasswords = new[]
+    {
+        "password", "123456", "12345678", "qwerty", "abc123",
+        "password123", "admin", "letmein", "welcome", "monkey"
+    };
+
+    return commonPasswords.Contains(password.ToLowerInvariant());
+}
+```
+- **Security**: Previne uso de senhas fracas conhecidas
+- **Dictionary Attack**: Proteção contra dicionários
+- **Extensible**: Lista pode ser expandida
+
+### Validação de Nomes
+```csharp
+private static bool IsValidName(string name)
+{
+    if (string.IsNullOrWhiteSpace(name) || name.Length > 50)
+        return false;
+
+    // Allow letters, spaces, hyphens, apostrophes, and periods
+    return Regex.IsMatch(name, @"^[a-zA-ZÀ-ÿ\s\-'\.]+$");
+}
+```
+- **Unicode Support**: Suporte a caracteres acentuados
+- **Cultural Sensitivity**: Permite nomes de diferentes culturas
+- **Special Characters**: Apostrofes, hífens e pontos permitidos
+
+## 📋 Logging e Auditoria Segura
+
+### Informações Seguras para Log
+```csharp
+public IDictionary<string, object> GetLoggingInfo()
+{
+    return new Dictionary<string, object>
+    {
+        ["email"] = Email.Length > 0 ? $"{Email[0]}***@{Email.Split('@').LastOrDefault()}" : "unknown",
+        ["firstName"] = FirstName.Length > 0 ? $"{FirstName[0]}***" : "unknown",
+        ["lastName"] = LastName.Length > 0 ? $"{LastName[0]}***" : "unknown",
+        ["tenantId"] = TenantId,
+        ["hasPhoneNumber"] = !string.IsNullOrWhiteSpace(PhoneNumber),
+        ["preferredLanguage"] = PreferredLanguage ?? "not-specified",
+        ["acceptTerms"] = AcceptTerms,
+        ["marketingOptIn"] = MarketingOptIn,
+        ["registrationSource"] = RegistrationSource ?? "unknown",
+        ["hasStrongPassword"] = HasStrongPassword,
+        ["timestamp"] = DateTime.UtcNow
+    };
+}
+```
+- **Privacy Protection**: Dados pessoais mascarados
+- **Audit Compliance**: Informações necessárias para auditoria
+- **GDPR Compliant**: Não expõe dados pessoais completos
+- **Security Metrics**: Métricas de segurança incluídas
+
+## 🏭 Factory Methods
+
+### Criação Controlada
+```csharp
+public static RegisterRequestDto Create(
+    string email,
+    string password,
+    string confirmPassword,
+    string firstName,
+    string lastName,
+    string tenantId)
+{
+    return new RegisterRequestDto
+    {
+        Email = email?.Trim() ?? string.Empty,
+        Password = password ?? string.Empty,
+        ConfirmPassword = confirmPassword ?? string.Empty,
+        FirstName = firstName?.Trim() ?? string.Empty,
+        LastName = lastName?.Trim() ?? string.Empty,
+        TenantId = tenantId?.Trim() ?? string.Empty
+    };
+}
+```
+- **Safe Construction**: Construção segura com normalização
+- **Null Safety**: Tratamento seguro de valores nulos
+- **Trimming**: Remoção automática de espaços
+
+## 🔒 Considerações de Segurança
+
+### Proteção de Dados Sensíveis
+- ⚠️ **Passwords**: Nunca logadas ou expostas
+- ⚠️ **Personal Data**: Dados pessoais mascarados em logs
+- ✅ **Email Masking**: Email parcialmente mascarado
+- ✅ **Name Masking**: Nomes mascarados para privacidade
+
+### Prevenção de Ataques
+- **Input Validation**: Validação rigorosa de entrada
+- **SQL Injection**: Prevenção via validação de entrada
+- **XSS Prevention**: Validação de caracteres especiais
+- **Rate Limiting**: Suporte a limitação de taxa
+
+### Compliance Regulatório
+- **GDPR**: Conformidade com proteção de dados
+- **Privacy by Design**: Privacidade por design
+- **Audit Trail**: Trilha de auditoria completa
+- **Data Minimization**: Coleta mínima de dados
+
+## 🔄 Fluxo de Registro
+
+### Processo Completo
+1. **Client Request**: Cliente envia RegisterRequestDto
+2. **Input Validation**: Validação de formato e regras
+3. **Business Validation**: Verificação de duplicatas
+4. **Password Strength**: Verificação de força da senha
+5. **Terms Compliance**: Verificação de aceitação de termos
+6. **User Creation**: Criação do usuário no sistema
+7. **Email Verification**: Envio de email de verificação
+8. **Response**: Resposta de sucesso ou erro
+
+### Validações em Camadas
+```csharp
+// 1. Attribute Validation (Model Binding)
+if (!ModelState.IsValid)
+    return BadRequest(ModelState);
+
+// 2. Business Validation
+if (!request.IsValid())
+    return BadRequest("Invalid registration data");
+
+// 3. Domain Validation
+var existingUser = await userService.GetByEmailAsync(request.NormalizedEmail, request.TenantId);
+if (existingUser != null)
+    return BadRequest("User already exists");
+```
+
+## 📊 Performance
+
+### Validação Eficiente
+- **Early Exit**: Validações falham rapidamente
+- **Compiled Regex**: Expressões regulares compiladas
+- **Minimal Allocations**: Poucas alocações desnecessárias
+- **Cached Validators**: Validadores cacheados quando possível
+
+### Processamento Assíncrono
+```csharp
+public async Task<Result<UserDto>> ProcessRegistrationAsync(RegisterRequestDto request)
+{
+    // Validação síncrona rápida
+    if (!request.IsValid())
+        return Result<UserDto>.Failure("Invalid registration data");
+
+    // Verificações assíncronas
+    var duplicateCheck = await CheckForDuplicatesAsync(request);
+    if (!duplicateCheck.IsSuccess)
+        return duplicateCheck;
+
+    // Criação do usuário
+    return await userService.CreateUserAsync(request);
+}
+```
+
+## 🧪 Testabilidade
+
+### Unit Tests
+```csharp
+[Test]
+public void IsValid_WithValidData_ShouldReturnTrue()
+{
+    var request = RegisterRequestDto.Create(
+        "user@test.com", 
+        "StrongPass123!", 
+        "StrongPass123!", 
+        "John", 
+        "Doe", 
+        "tenant1"
+    );
+    request.AcceptTerms = true;
+    
+    Assert.True(request.IsValid());
+}
+
+[Test]
+public void HasStrongPassword_WithWeakPassword_ShouldReturnFalse()
+{
+    var request = new RegisterRequestDto { Password = "123456" };
+    Assert.False(request.HasStrongPassword);
+}
+```
+
+### Property-Based Tests
+```csharp
+[Property]
+public void IsValidEmail_WithRandomValidEmails_ShouldReturnTrue(ValidEmail email)
+{
+    var request = new RegisterRequestDto { Email = email.Value };
+    Assert.True(IsValidEmail(request.Email));
+}
+```
+
+## 🌐 Integração com Frontend
+
+### TypeScript Interface
+```typescript
+interface RegisterRequest {
+    email: string;
+    password: string;
+    confirmPassword: string;
+    firstName: string;
+    lastName: string;
+    tenantId: string;
+    phoneNumber?: string;
+    preferredLanguage?: string;
+    timezone?: string;
+    acceptTerms: boolean;
+    marketingOptIn?: boolean;
+    registrationSource?: string;
+    metadata?: Record<string, string>;
+}
+```
+
+### React Form Validation
+```javascript
+const useRegistrationValidation = () => {
+    const validatePassword = (password) => {
+        const hasUpper = /[A-Z]/.test(password);
+        const hasLower = /[a-z]/.test(password);
+        const hasDigit = /\d/.test(password);
+        const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+        
+        const score = [hasUpper, hasLower, hasDigit, hasSpecial].filter(Boolean).length;
+        return score >= 3 && password.length >= 8;
+    };
+    
+    return { validatePassword };
+};
+```
+
+## 🔮 Extensibilidade
+
+### Campos Customizados Futuros
+```csharp
+[JsonPropertyName("companyName")]
+public string? CompanyName { get; set; }
+
+[JsonPropertyName("jobTitle")]
+public string? JobTitle { get; set; }
+
+[JsonPropertyName("referralCode")]
+public string? ReferralCode { get; set; }
+
+[JsonPropertyName("privacyPolicyVersion")]
+public string? PrivacyPolicyVersion { get; set; }
+```
+
+### Validações Adicionais
+- **Company Registration**: Validação de empresa
+- **Industry Selection**: Seleção de setor
+- **Role-Based Registration**: Registro baseado em função
+- **Integration Preferences**: Preferências de integração
+
+## 🎯 Padrões de Uso
+
+### Controller Implementation
+```csharp
+[HttpPost("register")]
+public async Task<ActionResult<UserDto>> Register([FromBody] RegisterRequestDto request)
+{
+    // Enrich with metadata
+    request.RegistrationSource = "web-app";
+    request.Metadata ??= new Dictionary<string, string>();
+    request.Metadata["ipAddress"] = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+    request.Metadata["userAgent"] = HttpContext.Request.Headers["User-Agent"].ToString();
+    
+    // Validate
+    if (!request.IsValid())
+        return BadRequest("Invalid registration data");
+    
+    // Process
+    var result = await registrationService.RegisterUserAsync(request);
+    
+    return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Error);
+}
+```
+
+### Service Layer
+```csharp
+public async Task<Result<UserDto>> RegisterUserAsync(RegisterRequestDto request)
+{
+    // Log registration attempt (safe)
+    logger.LogInformation("Registration attempt: {@RegistrationInfo}", request.GetLoggingInfo());
+    
+    // Check for existing user
+    var existingUser = await userRepository.GetByEmailAsync(request.NormalizedEmail, request.TenantId);
+    if (existingUser != null)
+        return Result<UserDto>.Failure("User already exists");
+    
+    // Create user entity
+    var user = new ApplicationUser
+    {
+        Email = request.NormalizedEmail,
+        FirstName = request.FirstName.Trim(),
+        LastName = request.LastName.Trim(),
+        TenantId = request.TenantId,
+        PhoneNumber = request.PhoneNumber,
+        PreferredLanguage = request.PreferredLanguage,
+        EmailVerified = false,
+        IsActive = true,
+        CreatedAt = DateTime.UtcNow
+    };
+    
+    // Hash password
+    user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
+    
+    // Save user
+    await userRepository.AddAsync(user);
+    await unitOfWork.SaveChangesAsync();
+    
+    // Send verification email
+    await emailService.SendVerificationEmailAsync(user);
+    
+    // Map to DTO
+    var userDto = mapper.Map<UserDto>(user);
+    
+    return Result<UserDto>.Success(userDto);
+}
+```
+
+## 🎯 Boas Práticas Implementadas
+
+### Security-First Design
+- **Strong Password Requirements**: Requisitos de senha forte
+- **Input Validation**: Validação rigorosa de entrada
+- **Data Protection**: Proteção de dados sensíveis
+- **Audit Trail**: Trilha de auditoria completa
+
+### User Experience
+- **Clear Error Messages**: Mensagens de erro claras
+- **Progressive Disclosure**: Campos opcionais separados
+- **Real-time Validation**: Validação em tempo real
+- **Accessibility**: Preparado para acessibilidade
+
+### Compliance & Privacy
+- **GDPR Compliance**: Conformidade com GDPR
+- **Terms Acceptance**: Aceitação explícita de termos
+- **Data Minimization**: Coleta mínima de dados
+- **Privacy by Design**: Privacidade por design
+
+### Technical Excellence
+- **Comprehensive Testing**: Testabilidade completa
+- **Performance Optimization**: Otimizações de performance
+- **Extensibility**: Preparado para crescimento
+- **Clean Code**: Código limpo e manutenível
+
+---
+
+## 📝 Notas de Implementação
+
+- ✅ Validação de senha forte com verificação de complexidade
+- ✅ Prevenção de senhas comuns conhecidas
+- ✅ Validação de nomes com suporte Unicode
+- ✅ Compliance com GDPR através de logging seguro
+- ✅ Aceitação obrigatória de termos para compliance legal
+- ✅ Suporte a localização e preferências do usuário
+- ✅ Factory method para construção segura
+- ✅ Extensibilidade através de metadados flexíveis
+- ✅ Testabilidade garantida através de design modular
+- ✅ Performance otimizada com validações eficientes

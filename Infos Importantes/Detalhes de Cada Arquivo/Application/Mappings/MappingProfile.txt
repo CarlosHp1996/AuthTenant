@@ -1,0 +1,244 @@
+# MappingProfile.cs - Profile de Mapeamento AutoMapper
+
+## 📋 Visão Geral
+Este arquivo contém o profile de configuração do AutoMapper, responsável por definir mapeamentos entre entidades de domínio e DTOs. Implementa padrões seguros e eficientes para transformação de dados.
+
+## 🏗️ Arquitetura e Estrutura
+
+### Herança e Configuração Base
+```csharp
+public class MappingProfile : Profile
+```
+- **Profile**: Classe base do AutoMapper para configuração de mapeamentos
+- **Centralização**: Um único local para todas as configurações de mapeamento
+- **Modularização**: Métodos separados para diferentes grupos de entidades
+
+### Métodos de Configuração
+1. **Constructor**: Chama todos os métodos de configuração específicos
+2. **ConfigureUserMappings()**: Mapeamentos relacionados a usuários
+3. **ConfigureProductMappings()**: Mapeamentos relacionados a produtos
+4. **ConfigureProductRelatedMappings()**: Mapeamentos adicionais de produtos
+5. **ConfigureAdditionalMappings()**: Placeholder para futuras entidades
+
+## 🔄 Mapeamentos Implementados
+
+### User ↔ UserDto
+```csharp
+// ApplicationUser para UserDto
+CreateMap<ApplicationUser, UserDto>()
+    .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => 
+        CreateFullName(src.FirstName, src.LastName)))
+    .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+    .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.FirstName))
+    .ForMember(dest => dest.LastName, opt => opt.MapFrom(src => src.LastName))
+    .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
+    .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+    .ValidateMemberList(MemberList.Destination);
+
+// UserDto para ApplicationUser (para atualizações)
+CreateMap<UserDto, ApplicationUser>()
+    .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => 
+        string.IsNullOrWhiteSpace(src.FirstName) ? null : src.FirstName.Trim()))
+    .ForMember(dest => dest.LastName, opt => opt.MapFrom(src => 
+        string.IsNullOrWhiteSpace(src.LastName) ? null : src.LastName.Trim()))
+    // Campos de sistema ignorados (gerenciados pela aplicação)
+    .ForMember(dest => dest.Id, opt => opt.Ignore())
+    .ForMember(dest => dest.Email, opt => opt.Ignore())
+    .ForMember(dest => dest.PasswordHash, opt => opt.Ignore())
+    .ForMember(dest => dest.SecurityStamp, opt => opt.Ignore())
+    .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+    .ValidateMemberList(MemberList.Source);
+```
+
+### Product ↔ ProductDto
+```csharp
+// Product para ProductDto
+CreateMap<Product, ProductDto>()
+    .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+    .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+    .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
+    .ForMember(dest => dest.Price, opt => opt.MapFrom(src => src.Price))
+    .ForMember(dest => dest.SKU, opt => opt.MapFrom(src => src.SKU))
+    .ForMember(dest => dest.StockQuantity, opt => opt.MapFrom(src => src.StockQuantity))
+    .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.IsActive))
+    .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+    .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt))
+    .ForMember(dest => dest.TenantId, opt => opt.MapFrom(src => src.TenantId))
+    // Mapeamentos condicionais baseados em regras de negócio
+    .ForMember(dest => dest.Description, opt => opt.Condition(src => !string.IsNullOrWhiteSpace(src.Description)))
+    .ForMember(dest => dest.SKU, opt => opt.Condition(src => !string.IsNullOrWhiteSpace(src.SKU)))
+    .ValidateMemberList(MemberList.Destination);
+
+// ProductDto para Product (para atualizações e criação)
+CreateMap<ProductDto, Product>()
+    .ForMember(dest => dest.Name, opt => opt.MapFrom(src => NormalizeName(src.Name)))
+    .ForMember(dest => dest.Description, opt => opt.MapFrom(src => 
+        string.IsNullOrWhiteSpace(src.Description) ? null : src.Description.Trim()))
+    .ForMember(dest => dest.Price, opt => opt.MapFrom(src => src.Price))
+    .ForMember(dest => dest.SKU, opt => opt.MapFrom(src => 
+        string.IsNullOrWhiteSpace(src.SKU) ? null : src.SKU.Trim().ToUpperInvariant()))
+    .ForMember(dest => dest.StockQuantity, opt => opt.MapFrom(src => Math.Max(0, src.StockQuantity)))
+    .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.IsActive))
+    // Campos gerenciados pelo sistema ignorados
+    .ForMember(dest => dest.Id, opt => opt.Ignore())
+    .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+    .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+    .ForMember(dest => dest.TenantId, opt => opt.Ignore())
+    .ValidateMemberList(MemberList.Source);
+```
+
+## 🛠️ Métodos Auxiliares
+
+### CreateFullName
+```csharp
+private static string CreateFullName(string? firstName, string? lastName)
+```
+- **Propósito**: Cria nome completo concatenando primeiro e último nome
+- **Tratamento de Nulos**: Lida graciosamente com valores nulos/vazios
+- **Fallback**: Retorna "Unknown User" quando ambos os nomes são vazios
+- **Normalização**: Remove espaços em branco desnecessários
+
+### NormalizeName
+```csharp
+private static string NormalizeName(string? name)
+```
+- **Propósito**: Normaliza nomes de produtos para consistência
+- **Validação**: Lança exceção para nomes nulos/vazios
+- **Limpeza**: Remove espaços em branco iniciais e finais
+- **Segurança**: Garante que dados críticos não sejam vazios
+
+## 🔒 Aspectos de Segurança
+
+### Validação de Mapeamentos
+- **ValidateMemberList**: Garante que todos os membros sejam mapeados explicitamente
+- **MemberList.Destination**: Valida mapeamentos para DTOs (saída)
+- **MemberList.Source**: Valida mapeamentos de DTOs (entrada)
+
+### Proteção de Campos Sensíveis
+```csharp
+// Campos protegidos ignorados no mapeamento
+.ForMember(dest => dest.PasswordHash, opt => opt.Ignore())
+.ForMember(dest => dest.SecurityStamp, opt => opt.Ignore())
+.ForMember(dest => dest.Id, opt => opt.Ignore())
+```
+
+### Sanitização de Dados
+- **Trim()**: Remove espaços desnecessários
+- **ToUpperInvariant()**: Normaliza SKUs para maiúsculas
+- **Math.Max(0, value)**: Garante quantidades não negativas
+
+## 📊 Transformações de Dados
+
+### Mapeamentos Condicionais
+```csharp
+.ForMember(dest => dest.Description, opt => opt.Condition(src => !string.IsNullOrWhiteSpace(src.Description)))
+```
+- **Condicional**: Só mapeia se o valor de origem atender critérios
+- **Performance**: Evita mapeamentos desnecessários
+- **Qualidade**: Garante que apenas dados válidos sejam transferidos
+
+### Transformações Personalizadas
+- **Nome Completo**: Concatenação inteligente de primeiro e último nome
+- **Normalização de SKU**: Conversão para maiúsculas
+- **Validação de Estoque**: Garantia de valores não negativos
+
+## 🔄 Fluxo de Dados
+
+### Entrada (DTOs → Entidades)
+1. **Validação**: Verifica se dados de entrada são válidos
+2. **Normalização**: Aplica regras de formatação
+3. **Sanitização**: Remove/corrige dados problemáticos
+4. **Proteção**: Ignora campos gerenciados pelo sistema
+
+### Saída (Entidades → DTOs)
+1. **Mapeamento Direto**: Transfere dados básicos
+2. **Transformação**: Aplica formatações para apresentação
+3. **Enriquecimento**: Adiciona campos calculados (como FullName)
+4. **Filtragem**: Exclui informações sensíveis
+
+## 🧪 Testabilidade
+
+### Métodos Estáticos
+- **Testáveis**: Todos os métodos auxiliares são estáticos e puros
+- **Determinísticos**: Sempre retornam o mesmo resultado para a mesma entrada
+- **Isolados**: Não dependem de estado externo
+
+### Validação Automática
+- **MemberList Validation**: Detecta automaticamente mapeamentos incompletos
+- **Compilation Time**: Erros são detectados em tempo de compilação
+- **Explicit Mapping**: Força mapeamento explícito de todos os campos
+
+## 📈 Performance
+
+### Otimizações
+- **Lazy Evaluation**: Mapeamentos condicionais só executam quando necessário
+- **Static Methods**: Métodos auxiliares estáticos para melhor performance
+- **Single Responsibility**: Cada método faz apenas uma coisa
+
+### Configuração Eficiente
+- **Profile Singleton**: AutoMapper reutiliza configurações
+- **Compilation**: Mapeamentos são compilados uma vez e reutilizados
+- **Memory Efficient**: Não mantém estado desnecessário
+
+## 🔮 Extensibilidade
+
+### Estrutura Modular
+```csharp
+private void ConfigureAdditionalMappings()
+{
+    // Placeholder para futuras entidades:
+    // ConfigureOrderMappings();
+    // ConfigureCategoryMappings();
+    // ConfigureTenantMappings();
+}
+```
+
+### Padrões de Extensão
+1. **Novos Métodos**: Adicionar métodos de configuração específicos
+2. **Herança**: Usar IncludeBase para reutilizar mapeamentos
+3. **Conditional Mapping**: Expandir lógica condicional conforme necessário
+
+## 🎯 Boas Práticas Implementadas
+
+### Clean Code
+- **Nomes Descritivos**: Métodos e variáveis com nomes claros
+- **Single Responsibility**: Cada método tem uma responsabilidade específica
+- **DRY Principle**: Evita duplicação de lógica
+
+### SOLID Principles
+- **Open/Closed**: Aberto para extensão através de novos métodos
+- **Single Responsibility**: Cada método configura um tipo específico
+- **Dependency Inversion**: Depende de abstrações (Profile)
+
+### Domain-Driven Design
+- **Separação de Responsabilidades**: Mapeamento isolado da lógica de negócio
+- **Linguagem Ubíqua**: Nomes que refletem o domínio
+- **Agregados**: Respeita limites de agregados nos mapeamentos
+
+## 🚀 Benefícios
+
+### Desenvolvimento
+- **Produtividade**: Reduz código boilerplate
+- **Consistência**: Padroniza transformações de dados
+- **Manutenibilidade**: Centraliza lógica de mapeamento
+
+### Qualidade
+- **Type Safety**: Verificação de tipos em tempo de compilação
+- **Error Prevention**: Validação automática de mapeamentos
+- **Data Integrity**: Garante integridade na transformação
+
+### Performance
+- **Optimized Mappings**: Mapeamentos otimizados pelo AutoMapper
+- **Reduced Allocations**: Minimiza alocações desnecessárias
+- **Cached Configurations**: Configurações são cacheadas
+
+---
+
+## 📝 Notas de Implementação
+
+- ✅ Todos os mapeamentos são explícitos e validados
+- ✅ Campos sensíveis são protegidos adequadamente  
+- ✅ Transformações seguem regras de negócio
+- ✅ Estrutura preparada para futuras extensões
+- ✅ Performance otimizada com métodos estáticos
+- ✅ Testabilidade garantida através de design

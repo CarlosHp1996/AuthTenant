@@ -1,0 +1,9 @@
+se der bug no vscode:
+
+Reload do VS Code
+code --reload-window
+
+Limpar cache e rebuild
+dotnet clean
+dotnet restore
+dotnet build

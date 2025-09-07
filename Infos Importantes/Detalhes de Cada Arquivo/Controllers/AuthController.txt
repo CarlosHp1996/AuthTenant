@@ -1,0 +1,25 @@
+AuthController.cs - Controlador de Autenticação
+Função Principal: Gerencia todas as operações relacionadas à autenticação e autorização de usuários.
+
+Endpoints Disponíveis:
+POST /api/auth/login
+Autentica usuário com email, senha e tenant ID
+Retorna JWT token e informações do usuário
+Status: 200 (sucesso), 400 (dados inválidos), 401 (credenciais inválidas), 404 (usuário/tenant não encontrado)
+
+POST /api/auth/register
+Registra novo usuário no sistema
+Retorna JWT token para o usuário recém-criado
+Status: 201 (criado), 400 (dados inválidos), 404 (tenant não encontrado), 409 (usuário já existe)
+
+GET /api/auth/validate-token
+Valida se o JWT token atual ainda é válido
+Endpoint protegido que confirma a validade do token
+Status: 200 (token válido), 401 (token inválido/expirado)
+
+Características Técnicas:
+Validação robusta de entrada (null checks)
+Documentação OpenAPI completa com exemplos de responses
+Integração com padrão CQRS via MediatR
+Suporte a multi-tenancy (tenant ID obrigatório)
+Response customizado para criação (201 Created) no registro

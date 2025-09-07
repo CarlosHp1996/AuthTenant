@@ -1,0 +1,240 @@
+# 📋 Documentação: ValidationBehavior.cs
+
+## 🎯 **Objetivo**
+MediatR pipeline behavior responsável por validação de requisições usando FluentValidation antes que alcancem seus handlers.
+
+## 🔧 **Funcionalidades Principais**
+
+### **1. Validação Automática**
+- ✅ Execução automática de todos os validadores registrados
+- ✅ Validação antes do processamento da requisição
+- ✅ Interceptação no pipeline do MediatR
+- ✅ Suporte a múltiplos validadores por request
+
+### **2. Performance Otimizada**
+- ✅ Execução concorrente de validadores com Task.WhenAll
+- ✅ Skip inteligente quando não há validadores
+- ✅ Validação eficiente com short-circuit
+- ✅ Overhead mínimo no pipeline
+
+### **3. Logging Estruturado**
+- ✅ Logs categorizados com emojis visuais (🔍, ✅, 🚫, ❌)
+- ✅ Informações detalhadas de cada falha
+- ✅ Contadores de validadores e erros
+- ✅ Logs estruturados para monitoramento
+
+### **4. Tratamento de Erros Robusto**
+- ✅ Validação de argumentos com ArgumentNullException.ThrowIfNull
+- ✅ Tratamento de exceções inesperadas
+- ✅ Re-throw apropriado de ValidationException
+- ✅ Logs de erros para debugging
+
+### **5. Informações Detalhadas**
+- ✅ Logs individuais para cada erro de validação
+- ✅ Propriedade, mensagem, valor tentado e severidade
+- ✅ Objetos estruturados para análise
+- ✅ Debug logs para troubleshooting
+
+## 🏗️ **Arquitetura**
+
+### **Classe Principal:**
+- `ValidationBehavior<TRequest, TResponse>`: Behavior de validação
+
+### **Dependências:**
+- `FluentValidation`: Validadores e contexto
+- `MediatR`: Pipeline behavior interface
+- `Microsoft.Extensions.Logging`: Logging estruturado
+
+### **Fluxo de Execução:**
+1. Verificação de validadores registrados
+2. Execução concorrente de validações
+3. Coleta de falhas de validação
+4. Logging detalhado de resultados
+5. Throw de ValidationException se houver falhas
+
+## 📊 **Validação e Logging**
+
+### **Níveis de Log:**
+```
+Debug: Contadores e status de validação
+Warning: Falhas de validação com detalhes
+Error: Exceções inesperadas
+```
+
+### **Informações Logadas:**
+- Tipo de request sendo validado
+- Número de validadores executados
+- Detalhes de cada falha encontrada
+- Performance e contadores
+
+## 🔒 **Robustez e Segurança**
+
+### **Validações de Entrada:**
+- ArgumentNullException.ThrowIfNull para request e next
+- Validação de coleções nulas
+- Verificação de failures válidas
+- Tratamento de edge cases
+
+### **Tratamento de Exceções:**
+- Captura de ValidationException (re-throw)
+- Captura de exceções inesperadas
+- Logging de erros para debugging
+- Preservação do stack trace
+
+## 🎮 **Configuração**
+
+### **Registro no DI:**
+```csharp
+services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+services.AddValidatorsFromAssemblyContaining<SomeValidator>();
+```
+
+### **Configuração de Logging:**
+```json
+{
+  "Logging": {
+    "LogLevel": {
+      "AuthTenant.Application.Behaviors.ValidationBehavior": "Debug"
+    }
+  }
+}
+```
+
+## 📈 **Monitoramento**
+
+### **Métricas Coletadas:**
+- Número de validadores por request
+- Taxa de sucesso/falha de validações
+- Detalhes de erros de validação
+- Performance de validação
+
+### **Logs Estruturados:**
+```csharp
+// Início da validação
+"🔍 Starting validation for {RequestType} with {ValidatorCount} validator(s)"
+
+// Sucesso
+"✅ Validation passed for {RequestType}"
+
+// Falha
+"🚫 Validation failed for {RequestType} | Errors: {ErrorCount} | Details: {@ValidationErrors}"
+
+// Erro individual
+"❌ Validation Error | Property: {PropertyName} | Message: {ErrorMessage} | Value: {AttemptedValue}"
+```
+
+## 🧪 **Testabilidade**
+
+### **Pontos de Teste:**
+- Mock de IValidator para simular validações
+- Mock de ILogger para verificar logs
+- Teste de execução concorrente
+- Validação de exception handling
+
+### **Cenários de Teste:**
+- Request válido (sem validadores)
+- Request válido (com validadores)
+- Request inválido (uma falha)
+- Request inválido (múltiplas falhas)
+- Exceções durante validação
+
+## 🚀 **Benefícios**
+
+### **Qualidade de Código:**
+- Validação automática e consistente
+- Separação de responsabilidades
+- Logging detalhado para debugging
+- Tratamento robusto de erros
+
+### **Performance:**
+- Execução concorrente de validadores
+- Skip quando não há validadores
+- Overhead mínimo no pipeline
+- Logging condicional
+
+### **Observabilidade:**
+- Logs estruturados e categorizados
+- Métricas de validação
+- Debugging facilitado
+- Monitoramento proativo
+
+### **Manutenibilidade:**
+- Código limpo e documentado
+- Injeção de dependência
+- Extensibilidade para novos validadores
+- Compatibilidade com FluentValidation
+
+## 📝 **Integração com FluentValidation**
+
+### **Validadores Suportados:**
+- Qualquer classe que implemente IValidator<TRequest>
+- Validadores customizados
+- Validadores condicionais
+- Validadores assíncronos
+
+### **Exception Handling:**
+- Usa FluentValidation.ValidationException nativa
+- Preserva ValidationFailure objects
+- Mantém compatibilidade total
+- Suporte a propriedades e mensagens
+
+## 🔄 **Fluxo de Execução Detalhado**
+
+### **1. Preparação:**
+```csharp
+// Validação de argumentos
+ArgumentNullException.ThrowIfNull(request);
+ArgumentNullException.ThrowIfNull(next);
+
+// Contagem de validadores
+var validatorCount = _validators.Count();
+```
+
+### **2. Execução:**
+```csharp
+// Contexto de validação
+var validationContext = new ValidationContext<TRequest>(request);
+
+// Execução concorrente
+var validationTasks = _validators.Select(validator =>
+    validator.ValidateAsync(validationContext, cancellationToken));
+
+var validationResults = await Task.WhenAll(validationTasks);
+```
+
+### **3. Processamento:**
+```csharp
+// Coleta de falhas
+var failures = validationResults
+    .Where(result => !result.IsValid)
+    .SelectMany(result => result.Errors)
+    .Where(failure => failure != null)
+    .ToList();
+```
+
+### **4. Resultado:**
+```csharp
+// Se há falhas: log detalhado + throw ValidationException
+// Se sucesso: log de sucesso + continue pipeline
+```
+
+## 📝 **Changelog**
+
+### **Versão Atual:**
+- ✅ Refatoração completa para robustez
+- ✅ Implementação de logging estruturado
+- ✅ Performance otimizada com execução concorrente
+- ✅ Documentação XML completa
+- ✅ Compatibilidade total com FluentValidation
+
+### **Melhorias Implementadas:**
+- Validação de argumentos robusta
+- Logging estruturado e categorizado
+- Execução concorrente de validadores
+- Tratamento detalhado de exceções
+- Observabilidade completa
+
+---
+**Data da Última Atualização:** 05/09/2025  
+**Versão:** 2.0 (Refatorada)  
+**Status:** ✅ Produção Ready

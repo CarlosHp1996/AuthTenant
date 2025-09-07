@@ -1,0 +1,320 @@
+=========================================================
+PRODUCT.CS - DOCUMENTAÇÃO TÉCNICA
+=========================================================
+
+VISÃO GERAL:
+-----------
+Entidade de domínio rica representando produtos no catálogo de e-commerce.
+Implementa modelo de domínio rico com lógica de negócio e validação.
+Segue padrões DDD com value objects, domain events e encapsulamento.
+
+LOCALIZAÇÃO:
+-----------
+📁 AuthTenant.Domain/Entities/Product.cs
+
+DEPENDÊNCIAS:
+------------
+✅ BaseEntity - Herança de funcionalidades base
+✅ System.ComponentModel.DataAnnotations - Validações de dados
+✅ System.ComponentModel.DataAnnotations.Schema - Mapeamento de banco
+✅ BusinessRuleException - Exceções de regras de negócio
+
+RESPONSABILIDADES:
+-----------------
+🔸 Gerenciamento completo do ciclo de vida do produto
+🔸 Controle de estoque com validações de negócio
+🔸 Gestão de preços com regras comerciais
+🔸 Categorização e organização de produtos
+🔸 Analytics e tracking de visualizações
+🔸 Validação de dados de entrada e integridade
+
+PROPRIEDADES PRINCIPAIS:
+-----------------------
+
+1. INFORMAÇÕES BÁSICAS:
+   ✅ Name (string) - Nome validado com 2-200 caracteres
+   ✅ Description (string?) - Descrição opcional até 2000 caracteres
+   ✅ Category (string?) - Categoria para organização
+   ✅ Tags (List<string>) - Tags para busca e filtragem
+   ✅ Validação de caracteres permitidos e profissionalismo
+
+2. INFORMAÇÕES COMERCIAIS:
+   ✅ Price (decimal) - Preço com precisão decimal(18,4)
+   ✅ SKU (string?) - Código único de produto opcional
+   ✅ IsActive (bool) - Status de ativação
+   ✅ IsFeatured (bool) - Status de destaque promocional
+   ✅ Validação de limites comerciais
+
+3. CONTROLE DE ESTOQUE:
+   ✅ StockQuantity (int) - Quantidade atual em estoque
+   ✅ MinimumStockLevel (int) - Nível mínimo para alertas
+   ✅ MaximumStockLevel (int) - Nível máximo para otimização
+   ✅ Validação de quantidades e limites razoáveis
+
+4. DIMENSÕES E LOGÍSTICA:
+   ✅ Weight (decimal?) - Peso em quilogramas
+   ✅ Length, Width, Height (decimal?) - Dimensões em centímetros
+   ✅ Volume calculado automaticamente
+   ✅ Suporte a cálculos de frete
+
+5. ANALYTICS E TRACKING:
+   ✅ ViewCount (long) - Contador de visualizações
+   ✅ LastViewedAt (DateTime?) - Última visualização
+   ✅ Métricas de engajamento e popularidade
+
+PROPRIEDADES COMPUTADAS:
+------------------------
+
+🔧 NormalizedName
+   - Nome normalizado para buscas consistentes
+   - Trim automático e formatação padrão
+
+🔧 NormalizedSKU
+   - SKU em maiúsculas para comparações
+   - Consistência em verificações de unicidade
+
+🔧 IsInStock
+   - Verifica disponibilidade considerando ativo + estoque
+   - Lógica de negócio encapsulada
+
+🔧 IsLowStock / IsOverstocked
+   - Alertas baseados em limites configurados
+   - Suporte a gestão automática de inventory
+
+🔧 Volume
+   - Cálculo automático de volume (L×W×H)
+   - Null se dimensões incompletas
+
+🔧 StockStatus
+   - Status descritivo para interfaces
+   - Estados: Active, Inactive, Out of Stock, Low Stock, Overstocked
+
+MÉTODOS DE DOMÍNIO - GESTÃO DE PREÇOS:
+------------------------------------
+
+🔧 UpdatePrice(decimal newPrice, string? updatedBy)
+   - Atualização segura de preços com validações
+   - Proteção contra mudanças extremas (>500% ou <10%)
+   - Auditoria automática de mudanças
+   - Limites comerciais (0.01 - 999,999.99)
+
+🔧 ApplyDiscount(decimal discountPercentage, string? updatedBy)
+   - Aplicação de descontos promocionais
+   - Validação de percentual (0-100%)
+   - Cálculo automático do novo preço
+   - Integração com sistema de promoções
+
+MÉTODOS DE DOMÍNIO - GESTÃO DE ESTOQUE:
+--------------------------------------
+
+🔧 AdjustStock(int quantity, string? updatedBy, string? reason)
+   - Ajuste de estoque com auditoria
+   - Suporte a entrada e saída de produtos
+   - Validação de estoque suficiente
+   - Rastreamento de razões de ajuste
+
+🔧 ReserveStock(int quantity, string? reservedBy)
+   - Reserva de estoque para pedidos pendentes
+   - Redução temporária de disponibilidade
+   - Validação de quantidade disponível
+   - Suporte a sistema de reservas
+
+🔧 Restock(int quantity, string? restockedBy)
+   - Reposição de estoque com validação
+   - Registro de entrada de mercadorias
+   - Auditoria de operações de restock
+   - Integração com fornecedores
+
+MÉTODOS DE DOMÍNIO - GESTÃO DE PRODUTO:
+--------------------------------------
+
+🔧 Activate(string? activatedBy) / Deactivate(string? deactivatedBy)
+   - Controle de ciclo de vida do produto
+   - Validações de estado antes de ativação
+   - Auditoria de mudanças de status
+   - Integração com catálogo
+
+🔧 MarkAsFeatured(string? featuredBy) / RemoveFromFeatured(string? unfeaturedBy)
+   - Gestão de produtos em destaque
+   - Validação de produto ativo para destaque
+   - Suporte a campanhas promocionais
+   - Tracking de produtos populares
+
+🔧 RecordView()
+   - Registro de visualizações para analytics
+   - Incremento de contador sem afetar UpdatedAt
+   - Timestamp de última visualização
+   - Métricas de engajamento
+
+🔧 UpdateTags(IEnumerable<string> tags, string? updatedBy)
+   - Gestão de tags com validação
+   - Normalização automática (lowercase, trim)
+   - Limite de 20 tags por produto
+   - Validação de formato de tags (50 chars, alfanumérico)
+
+VALIDAÇÕES DE NEGÓCIO:
+---------------------
+
+1. NOME DO PRODUTO:
+   ❌ Não pode ser nulo ou vazio
+   ❌ Mínimo 2, máximo 200 caracteres
+   ❌ Apenas caracteres válidos (letras, números, símbolos comerciais)
+   ❌ Não pode conter palavras proibidas (teste, dummy, fake)
+
+2. PREÇO:
+   ❌ Deve ser maior que zero
+   ❌ Máximo 4 casas decimais
+   ❌ Faixa comercial válida (0.01 - 999,999.99)
+   ❌ Mudanças extremas bloqueadas (>500% ou <10%)
+
+3. SKU:
+   ❌ Se fornecido, 3-50 caracteres
+   ❌ Apenas maiúsculas, números, hífens e underscores
+   ❌ Não pode começar/terminar com caracteres especiais
+   ❌ Múltiplos formatos aceitos (PROD-2024-001, ABC123)
+
+4. ESTOQUE:
+   ❌ Não pode ser negativo
+   ❌ Limites razoáveis para prevenir erros
+   ❌ Mínimo ≤ Máximo quando configurado
+   ❌ Validação de mudanças drásticas
+
+5. TAGS:
+   ❌ Máximo 20 tags por produto
+   ❌ Cada tag: 2-50 caracteres
+   ❌ Apenas lowercase, números, hífens, underscores
+   ❌ Sem duplicatas
+
+CONSTANTES DE VALIDAÇÃO:
+-----------------------
+📊 MIN_NAME_LENGTH = 2 caracteres
+📊 MAX_NAME_LENGTH = 200 caracteres
+📊 MAX_DESCRIPTION_LENGTH = 2000 caracteres
+📊 MIN_SKU_LENGTH = 3 caracteres
+📊 MAX_SKU_LENGTH = 50 caracteres
+📊 MIN_PRICE = 0.01m
+📊 MAX_PRICE = 999999.99m
+📊 MAX_STOCK_QUANTITY = 1.000.000
+📊 MAX_TAGS_COUNT = 20
+📊 MAX_TAG_LENGTH = 50 caracteres
+
+FUNCIONALIDADES DE SEGURANÇA:
+-----------------------------
+🔒 Validação de entrada contra XSS
+🔒 Sanitização de campos de texto
+🔒 Proteção contra injeção de dados
+🔒 Validação de limites comerciais
+🔒 Auditoria de todas as mudanças
+🔒 Encapsulamento de regras de negócio
+
+PADRÕES ARQUITETURAIS:
+---------------------
+🏗️ Rich Domain Model - Entidade com comportamentos
+🏗️ Value Objects - Propriedades computadas imutáveis
+🏗️ Domain Events - Notificações de mudanças (comentado)
+🏗️ Specification Pattern - Validações complexas
+🏗️ Factory Pattern - Construção controlada
+🏗️ Business Rules - Regras de negócio encapsuladas
+
+INTEGRAÇÃO COM SISTEMA:
+----------------------
+🔗 Entity Framework - Mapeamento ORM com anotações
+🔗 Product Repository - Persistência e consultas
+🔗 Price History Service - Tracking de mudanças de preço
+🔗 Inventory Service - Gestão de estoque
+🔗 Analytics Service - Métricas de visualização
+🔗 Search Engine - Indexação de nome e tags
+
+CENÁRIOS DE USO:
+---------------
+✅ Criação de novos produtos no catálogo
+✅ Atualização de preços com validação
+✅ Gestão de estoque e reservas
+✅ Ativação/desativação de produtos
+✅ Destaque de produtos promocionais
+✅ Tracking de visualizações e popularidade
+✅ Categorização e organização
+✅ Cálculos de frete e logistics
+
+PERFORMANCE:
+-----------
+⚡ Propriedades computadas calculadas sob demanda
+⚡ Validações otimizadas com early returns
+⚡ Encapsulamento reduz mutações desnecessárias
+⚡ Lazy loading de navegação properties
+⚡ Indexação otimizada via anotações
+
+MANUTENÇÃO:
+----------
+🔧 Validações configuráveis via constantes
+🔧 Regras de negócio centralizadas
+🔧 Logs estruturados via ToString()
+🔧 Extensibilidade via override de IsValid()
+🔧 Evolução compatível de propriedades
+
+CONSIDERAÇÕES DE NEGÓCIO:
+------------------------
+⚠️ Integrar com sistema de categorias
+⚠️ Implementar validação de unicidade de SKU
+⚠️ Considerar versionamento de produtos
+⚠️ Adicionar suporte a variações
+⚠️ Implementar aprovação de mudanças críticas
+⚠️ Integrar com sistema de fornecedores
+
+EXEMPLO DE USO:
+--------------
+```csharp
+// Criação de produto
+var product = new Product(
+    "Smartphone Galaxy S24", 
+    2999.99m, 
+    "tenant1", 
+    "user123"
+);
+
+// Configuração adicional
+product.Description = "Smartphone Android com 128GB";
+product.SKU = "SAMS-2024-001";
+product.Category = "Electronics";
+product.UpdateTags(new[] { "smartphone", "android", "samsung" }, "user123");
+
+// Gestão de estoque
+product.Restock(100, "warehouse");
+product.ReserveStock(5, "order123");
+
+// Gestão de preços
+product.ApplyDiscount(10, "promotion"); // 10% desconto
+
+// Analytics
+product.RecordView();
+var isPopular = product.ViewCount > 1000;
+
+// Validações
+var isValid = product.IsValid();
+var isInStock = product.IsInStock;
+var stockStatus = product.StockStatus;
+```
+
+EXTENSÕES FUTURAS:
+-----------------
+🔮 Product Variants - Variações de cor, tamanho, etc.
+🔮 Price History - Histórico completo de preços
+🔮 Review System - Sistema de avaliações
+🔮 Recommendation Engine - Produtos relacionados
+🔮 Inventory Alerts - Notificações automáticas
+🔮 Supplier Integration - Integração com fornecedores
+
+VERSIONAMENTO:
+-------------
+📋 Versão: 2.0.0
+📋 Última Atualização: 2024
+📋 Compatibilidade: .NET 8+
+📋 Status: Produção
+
+AUTOR & RESPONSÁVEL:
+-------------------
+👨‍💻 Desenvolvido por: Equipe AuthTenant
+👨‍💻 Mantido por: Time de Produtos
+📧 Contato: products@AuthTenant.com
+
+=========================================================

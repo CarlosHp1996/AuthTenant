@@ -1,0 +1,232 @@
+=========================================================
+BASEENTITY.CS - DOCUMENTAÇÃO TÉCNICA
+=========================================================
+
+VISÃO GERAL:
+-----------
+Classe base abstrata que fornece propriedades e funcionalidades comuns para todas as entidades do domínio.
+Implementa padrões fundamentais como multi-tenancy, auditoria, soft delete e igualdade.
+Segue princípios de DDD e Clean Architecture com encapsulamento de regras de negócio.
+
+LOCALIZAÇÃO:
+-----------
+📁 AuthTenant.Domain/Entities/BaseEntity.cs
+
+DEPENDÊNCIAS:
+------------
+✅ AuthTenant.Domain.Interfaces.ITenantEntity - Interface para multi-tenancy
+✅ AuthTenant.Domain.Interfaces.IAuditableEntity - Interface para auditoria
+✅ System.ComponentModel.DataAnnotations - Validações de dados
+✅ System.IEquatable<BaseEntity> - Implementação de igualdade
+
+RESPONSABILIDADES:
+-----------------
+🔸 Fornecer identificação única para todas as entidades
+🔸 Implementar isolamento multi-tenant
+🔸 Prover funcionalidades de auditoria automática
+🔸 Implementar soft delete para preservação de dados
+🔸 Garantir comparação consistente entre entidades
+🔸 Aplicar validações básicas de integridade
+
+PROPRIEDADES IMPLEMENTADAS:
+--------------------------
+
+1. IDENTIFICAÇÃO E TENANT:
+   ✅ Id (Guid) - Identificador único protegido
+   ✅ TenantId (string) - Isolamento multi-tenant obrigatório
+   ✅ Validação de GUID não vazio
+   ✅ Validação de TenantId obrigatório
+
+2. AUDITORIA AUTOMÁTICA:
+   ✅ CreatedAt (DateTime) - Timestamp de criação UTC
+   ✅ CreatedBy (string?) - Usuário que criou a entidade
+   ✅ UpdatedAt (DateTime?) - Timestamp da última atualização
+   ✅ UpdatedBy (string?) - Usuário que fez a última atualização
+
+3. SOFT DELETE:
+   ✅ IsDeleted (bool) - Flag de exclusão lógica protegida
+   ✅ DeletedAt (DateTime?) - Timestamp da exclusão
+   ✅ DeletedBy (string?) - Usuário que executou a exclusão
+   ✅ Preservação de integridade referencial
+
+MÉTODOS DE DOMÍNIO:
+------------------
+
+🔧 MarkAsUpdated(string? updatedBy)
+   - Atualiza timestamp e usuário de modificação
+   - Chamado automaticamente em operações de negócio
+   - Suporte a auditoria de mudanças
+
+🔧 MarkAsDeleted(string? deletedBy)
+   - Implementa soft delete com metadados
+   - Previne exclusão dupla
+   - Atualiza campos de auditoria
+
+🔧 Restore(string? restoredBy)
+   - Restaura entidade excluída logicamente
+   - Limpa metadados de exclusão
+   - Mantém histórico de auditoria
+
+🔧 BelongsToTenant(string tenantId)
+   - Validação crítica de segurança multi-tenant
+   - Comparação case-insensitive
+   - Exceção para tenant ID inválido
+
+🔧 IsValid()
+   - Validação de estado da entidade
+   - Regras de negócio fundamentais
+   - Extensível em classes derivadas
+
+🔧 GetAge()
+   - Calcula idade da entidade
+   - Útil para analytics e lifecycle
+   - Baseado em UTC
+
+🔧 GetTimeSinceLastUpdate()
+   - Tempo desde última modificação
+   - Suporte a monitoramento de atividade
+   - Null se nunca foi atualizada
+
+IMPLEMENTAÇÃO DE IGUALDADE:
+--------------------------
+
+🔧 Equals(BaseEntity? other)
+   - Comparação por Id e TenantId
+   - Verificação de tipo consistente
+   - Suporte a herança
+
+🔧 GetHashCode()
+   - Hash code baseado em Id e TenantId
+   - Consistente com Equals
+   - Otimizado para coleções
+
+🔧 Operadores == e !=
+   - Sobrecarga para comparação natural
+   - Suporte a comparações null
+   - Comportamento consistente
+
+FUNCIONALIDADES DE SEGURANÇA:
+-----------------------------
+🔒 Proteção de propriedades críticas (Id, CreatedAt, IsDeleted)
+🔒 Validação obrigatória de TenantId
+🔒 Verificação de pertencimento a tenant
+🔒 Auditoria automática de mudanças
+🔒 Soft delete para preservação de dados
+🔒 Validação de estado da entidade
+
+PADRÕES ARQUITETURAIS:
+---------------------
+🏗️ DDD - Entidade de domínio rica com comportamentos
+🏗️ Multi-Tenancy - Isolamento seguro de dados
+🏗️ Audit Trail - Rastreamento automático de mudanças
+🏗️ Soft Delete - Preservação de integridade referencial
+🏗️ Value Equality - Comparação semântica consistente
+🏗️ Fail-Fast - Validação imediata de regras
+
+INTEGRAÇÃO COM SISTEMA:
+----------------------
+🔗 Entity Framework - Mapeamento ORM automático
+🔗 ASP.NET Core Identity - Integração com sistema de usuários
+🔗 Multi-tenant Middleware - Isolamento automático
+🔗 Audit Interceptor - Captura automática de mudanças
+🔗 Soft Delete Filter - Exclusão automática de deletados
+
+CENÁRIOS DE USO:
+---------------
+✅ Criação de novas entidades de domínio
+✅ Auditoria automática de mudanças
+✅ Exclusão lógica preservando referências
+✅ Restauração de dados excluídos
+✅ Validação de acesso multi-tenant
+✅ Comparação e ordenação de entidades
+✅ Tracking de lifecycle de entidades
+
+VALIDAÇÕES IMPLEMENTADAS:
+------------------------
+❌ Id não pode ser Guid.Empty
+❌ TenantId não pode ser null ou vazio
+❌ CreatedAt deve ser <= DateTime.UtcNow
+❌ Validação de estado consistente
+❌ Proteção contra soft delete duplo
+❌ Validação de tenant em operações críticas
+
+PERFORMANCE:
+-----------
+⚡ Propriedades protegidas minimizam mutações desnecessárias
+⚡ GetHashCode otimizado para coleções
+⚡ Comparações otimizadas com early returns
+⚡ Validações eficientes com short-circuit
+⚡ UTC timestamps para consistency global
+
+MANUTENÇÃO:
+----------
+🔧 Validações extensíveis via override
+🔧 Metadados de auditoria configuráveis
+🔧 Comportamentos customizáveis em classes derivadas
+🔧 Logs estruturados via ToString()
+🔧 Evolução compatível de propriedades
+
+CONSIDERAÇÕES DE DESIGN:
+-----------------------
+⚠️ Todas as entidades devem herdar desta classe
+⚠️ TenantId deve ser sempre validado em operações
+⚠️ Soft delete deve ser respeitado em queries
+⚠️ Auditoria deve ser preservada em migrações
+⚠️ Comparações devem considerar tanto Id quanto TenantId
+
+EXEMPLO DE USO:
+--------------
+```csharp
+// Criação de entidade derivada
+public class Product : BaseEntity
+{
+    private string _name;
+    
+    public string Name 
+    { 
+        get => _name; 
+        set 
+        { 
+            _name = value; 
+            MarkAsUpdated("user123"); 
+        } 
+    }
+}
+
+// Uso de funcionalidades base
+var product = new Product { TenantId = "tenant1" };
+var isValid = product.IsValid(); // true
+var belongsToTenant = product.BelongsToTenant("tenant1"); // true
+
+// Soft delete
+product.MarkAsDeleted("admin");
+var isDeleted = product.IsDeleted; // true
+
+// Comparação
+var product2 = new Product { TenantId = "tenant1" };
+var areEqual = product.Equals(product2); // true se mesmo Id
+```
+
+EXTENSÕES RECOMENDADAS:
+----------------------
+🔮 Domain Events - Notificações de mudanças de estado
+🔮 Versioning - Controle de versão de entidades
+🔮 Encryption - Criptografia de campos sensíveis
+🔮 Compression - Compressão de dados para storage
+🔮 Caching - Cache de entidades frequentemente acessadas
+🔮 Validation Attributes - Validações declarativas adicionais
+
+VERSIONAMENTO:
+-------------
+📋 Versão: 2.0.0
+📋 Última Atualização: 2024
+📋 Compatibilidade: .NET 8+
+📋 Status: Produção
+
+AUTOR & RESPONSÁVEL:
+-------------------
+👨‍💻 Desenvolvido por: Equipe AuthTenant
+👨‍💻 Mantido por: Time de Arquitetura
+📧 Contato: architecture@AuthTenant.com
+
+=========================================================

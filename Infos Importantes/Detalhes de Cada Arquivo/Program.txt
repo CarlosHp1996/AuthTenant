@@ -1,0 +1,18 @@
+Program.cs - Ponto de Entrada da Aplicação
+Função Principal: Arquivo de configuração e inicialização da aplicação ASP.NET Core.
+
+Responsabilidades:
+
+Configuração de Logging: Define providers de log (console) e níveis de log diferentes para desenvolvimento
+Registro de Serviços: Chama AddApiServices() para registrar todos os serviços de DI (Dependency Injection)
+Pipeline de Middleware: Configura a ordem dos middlewares (exceções, tenant, autenticação, autorização)
+Swagger/OpenAPI: Configuração completa do Swagger UI para desenvolvimento, incluindo customizações de interface
+CORS: Política de CORS diferenciada para desenvolvimento vs produção
+Health Checks: Endpoint /health para monitoramento
+Inicialização do Banco: Método assíncrono que testa conexão e garante que o schema esteja atualizado
+Roteamento: Configuração de rotas e redirecionamento da raiz para Swagger em desenvolvimento
+
+Características Técnicas:
+Tratamento robusto de erros na inicialização
+Logging estruturado com diferentes níveis por ambiente
+Configuração específica por ambiente (Development vs Production)

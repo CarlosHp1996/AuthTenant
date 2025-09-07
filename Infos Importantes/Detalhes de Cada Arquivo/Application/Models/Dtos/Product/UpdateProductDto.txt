@@ -1,0 +1,432 @@
+# UpdateProductDto.cs - Documentação Técnica
+
+## 📋 Visão Geral
+O `UpdateProductDto` é um Data Transfer Object sofisticado para operações de atualização de produtos, implementando suporte a partial updates, controle granular de campos, validação contextual e preservação de integridade de dados em ambiente multi-tenant.
+
+## 🏗️ Arquitetura e Design
+
+### Padrões Implementados
+- **Data Transfer Object (DTO)**: Transferência segura para atualizações
+- **Command Pattern**: Representa comando de atualização
+- **Partial Update Pattern**: Atualizações seletivas de campos
+- **Flag Pattern**: Controle de quais campos atualizar
+- **Validation Pattern**: Validação contextual para updates
+
+### Princípios SOLID
+- **SRP**: Focado exclusivamente em atualizações de produtos
+- **OCP**: Extensível via flags de update e metadata
+- **LSP**: Compatível com interface de atualização
+- **ISP**: Interface específica para updates
+- **DIP**: Independente de detalhes de persistência
+
+## 🔧 Principais Funcionalidades
+
+### Propriedades Core
+```csharp
+[Required]
+public string Name { get; set; }                // Nome atualizado
+public string? Description { get; set; }        // Descrição atualizada
+[Required]
+public decimal Price { get; set; }              // Novo preço
+public string? SKU { get; set; }                // SKU atualizado
+public int StockQuantity { get; set; }          // Quantidade atualizada
+public bool IsActive { get; set; }              // Status ativo/inativo
+```
+
+### Propriedades Avançadas
+```csharp
+public IList<string> Categories { get; set; }   // Categorias (substitui existentes)
+public IList<string> Tags { get; set; }         // Tags (substitui existentes)
+public int? MinimumStockLevel { get; set; }     // Nível mínimo opcional
+public double? Weight { get; set; }             // Peso atualizado
+public ProductDimensions? Dimensions { get; set; } // Dimensões atualizadas
+public IDictionary<string, string>? Metadata    // Metadados (merge com existentes)
+```
+
+### Controle de Partial Updates
+```csharp
+public UpdateFields? UpdateFields { get; set; } // Flags de controle de update
+```
+
+### Propriedades Computadas
+```csharp
+public string NormalizedName                    // Nome normalizado
+public string? NormalizedSKU                    // SKU normalizado
+public bool HasSufficientInfo                   // Informação suficiente
+public bool IsStockUpdate                       // Update relacionado a estoque
+public bool IsPriceUpdate                       // Update de preço
+```
+
+## 🏁 Sistema de Flags para Partial Updates
+
+### Classe UpdateFields
+```csharp
+public sealed class UpdateFields
+{
+    public bool Name { get; set; }               // Atualizar nome
+    public bool Description { get; set; }        // Atualizar descrição
+    public bool Price { get; set; }              // Atualizar preço
+    public bool SKU { get; set; }                // Atualizar SKU
+    public bool StockQuantity { get; set; }      // Atualizar estoque
+    public bool IsActive { get; set; }           // Atualizar status
+    public bool Categories { get; set; }         // Atualizar categorias
+    public bool Tags { get; set; }               // Atualizar tags
+    public bool MinimumStockLevel { get; set; }  // Atualizar nível mínimo
+    public bool Weight { get; set; }             // Atualizar peso
+    public bool Dimensions { get; set; }         // Atualizar dimensões
+    public bool Metadata { get; set; }           // Atualizar metadados
+}
+```
+
+### Uso de Partial Updates
+```csharp
+var updateDto = new UpdateProductDto
+{
+    Price = 349.99m,
+    StockQuantity = 150,
+    UpdateFields = new UpdateFields
+    {
+        Price = true,      // Apenas atualiza preço
+        StockQuantity = true // e quantidade em estoque
+        // Outros campos permanecem inalterados
+    }
+};
+```
+
+## ✅ Validação Contextual
+
+### Validação para Updates
+```csharp
+public bool IsValid()
+{
+    return !string.IsNullOrWhiteSpace(Name) &&
+           Name.Length >= 2 &&
+           Name.Length <= 200 &&
+           Price > 0 &&
+           StockQuantity >= 0 &&
+           (MinimumStockLevel ?? 0) >= 0 &&
+           (Description?.Length ?? 0) <= 2000 &&
+           (SKU?.Length ?? 0) <= 50 &&
+           (Weight ?? 0) >= 0 &&
+           IsValidName(Name) &&
+           IsValidSKU(SKU) &&
+           IsValidCategories(Categories) &&
+           IsValidTags(Tags);
+}
+```
+
+### Detecção de Updates Significativos
+```csharp
+public bool IsSignificantUpdate()
+{
+    return IsPriceUpdate || IsStockUpdate || UpdateFields?.IsActive == true;
+}
+```
+
+## 🔒 Sanitização Inteligente
+
+### Limpeza de Dados com Preservação
+```csharp
+public void Sanitize()
+{
+    Name = Name?.Trim() ?? string.Empty;
+    Description = string.IsNullOrWhiteSpace(Description) ? null : Description.Trim();
+    SKU = string.IsNullOrWhiteSpace(SKU) ? null : SKU.Trim().ToUpperInvariant();
+    
+    // Limpa categorias mantendo ordem e removendo duplicatas
+    Categories = Categories?.Where(c => !string.IsNullOrWhiteSpace(c))
+                          .Select(c => c.Trim())
+                          .Distinct()
+                          .ToList() ?? new List<string>();
+    
+    // Normaliza tags para lowercase (melhor para busca)
+    Tags = Tags?.Where(t => !string.IsNullOrWhiteSpace(t))
+               .Select(t => t.Trim().ToLowerInvariant())
+               .Distinct()
+               .ToList() ?? new List<string>();
+
+    // Valida lógica de estoque
+    if (MinimumStockLevel.HasValue && MinimumStockLevel > StockQuantity)
+        MinimumStockLevel = Math.Max(0, StockQuantity - 1);
+}
+```
+
+## 📊 Controle Granular de Updates
+
+### Identificação de Tipos de Update
+```csharp
+// Verifica se é update de estoque
+public bool IsStockUpdate => UpdateFields?.StockQuantity == true || 
+                           UpdateFields?.MinimumStockLevel == true;
+
+// Verifica se é update de preço (pode trigger notificações)
+public bool IsPriceUpdate => UpdateFields?.Price == true;
+```
+
+### Validação Específica por Contexto
+```csharp
+public IList<string> GetValidationErrors()
+{
+    var errors = new List<string>();
+
+    // Validações básicas sempre aplicam
+    if (string.IsNullOrWhiteSpace(Name))
+        errors.Add("Product name is required");
+
+    if (Price <= 0)
+        errors.Add("Price must be greater than 0");
+
+    // Validações específicas para updates de estoque
+    if (IsStockUpdate)
+    {
+        if (StockQuantity < 0)
+            errors.Add("Stock quantity cannot be negative");
+            
+        if (MinimumStockLevel.HasValue && MinimumStockLevel < 0)
+            errors.Add("Minimum stock level cannot be negative");
+    }
+
+    return errors;
+}
+```
+
+## 🔄 Integração com Update Handlers
+
+### Command Handler Pattern
+```csharp
+public class UpdateProductCommand : IRequest<Result<ProductDto>>
+{
+    public Guid ProductId { get; set; }
+    public UpdateProductDto UpdateData { get; set; }
+}
+
+public class UpdateProductHandler : IRequestHandler<UpdateProductCommand, Result<ProductDto>>
+{
+    public async Task<Result<ProductDto>> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
+    {
+        // Sanitiza dados de entrada
+        request.UpdateData.Sanitize();
+        
+        // Valida DTO
+        if (!request.UpdateData.IsValid())
+        {
+            var errors = request.UpdateData.GetValidationErrors();
+            return Result<ProductDto>.Failure(string.Join(", ", errors));
+        }
+        
+        // Busca produto existente
+        var product = await _productRepository.GetByIdAsync(request.ProductId);
+        if (product == null)
+            return Result<ProductDto>.Failure("Product not found");
+        
+        // Aplica updates seletivos
+        ApplyPartialUpdate(product, request.UpdateData);
+        
+        // Persiste mudanças
+        await _productRepository.UpdateAsync(product);
+        
+        // Notifica se é update significativo
+        if (request.UpdateData.IsSignificantUpdate())
+        {
+            await _eventPublisher.PublishAsync(new ProductUpdatedEvent(product.Id));
+        }
+        
+        var result = _mapper.Map<ProductDto>(product);
+        return Result<ProductDto>.Success(result);
+    }
+}
+```
+
+### Aplicação de Updates Seletivos
+```csharp
+private void ApplyPartialUpdate(Product product, UpdateProductDto updateDto)
+{
+    var fields = updateDto.UpdateFields;
+    if (fields == null) return;
+
+    if (fields.Name) product.Name = updateDto.Name;
+    if (fields.Description) product.Description = updateDto.Description;
+    if (fields.Price) product.Price = updateDto.Price;
+    if (fields.SKU) product.SKU = updateDto.SKU;
+    if (fields.StockQuantity) product.StockQuantity = updateDto.StockQuantity;
+    if (fields.IsActive) product.IsActive = updateDto.IsActive;
+    
+    if (fields.Categories)
+    {
+        product.Categories.Clear();
+        foreach (var category in updateDto.Categories)
+            product.Categories.Add(category);
+    }
+    
+    if (fields.Tags)
+    {
+        product.Tags.Clear();
+        foreach (var tag in updateDto.Tags)
+            product.Tags.Add(tag);
+    }
+    
+    if (fields.Metadata && updateDto.Metadata != null)
+    {
+        foreach (var kvp in updateDto.Metadata)
+            product.Metadata[kvp.Key] = kvp.Value;
+    }
+}
+```
+
+## 📊 Serialização JSON para Updates
+
+### Exemplo de Payload Completo
+```json
+{
+  "name": "Premium Wireless Headphones - Enhanced Edition",
+  "description": "Updated with improved noise cancellation technology",
+  "price": 349.99,
+  "stockQuantity": 150,
+  "categories": ["Electronics", "Audio", "Premium"],
+  "tags": ["wireless", "premium", "enhanced", "v2"],
+  "updateFields": {
+    "name": true,
+    "description": true,
+    "price": true,
+    "stockQuantity": true,
+    "categories": true,
+    "tags": true
+  }
+}
+```
+
+### Exemplo de Payload Parcial
+```json
+{
+  "price": 299.99,
+  "stockQuantity": 200,
+  "updateFields": {
+    "price": true,
+    "stockQuantity": true
+  }
+}
+```
+
+## 🧪 Testabilidade Avançada
+
+### Factory para Testes
+```csharp
+public static UpdateProductDto CreateForTesting(string name, decimal price)
+{
+    return new UpdateProductDto
+    {
+        Name = name,
+        Price = price,
+        StockQuantity = 100,
+        IsActive = true,
+        UpdateFields = new UpdateFields
+        {
+            Name = true,
+            Price = true,
+            StockQuantity = true,
+            IsActive = true
+        }
+    };
+}
+```
+
+### Testes de Partial Updates
+```csharp
+[Test]
+public void Should_Only_Update_Specified_Fields()
+{
+    // Arrange
+    var updateDto = new UpdateProductDto
+    {
+        Price = 199.99m,
+        UpdateFields = new UpdateFields { Price = true }
+    };
+    
+    // Act
+    var isPriceUpdate = updateDto.IsPriceUpdate;
+    var isStockUpdate = updateDto.IsStockUpdate;
+    
+    // Assert
+    Assert.That(isPriceUpdate, Is.True);
+    Assert.That(isStockUpdate, Is.False);
+}
+```
+
+## 📈 Melhorias Implementadas
+
+### Antes da Refatoração
+- Update sempre substituía todos os campos
+- Sem controle granular de mudanças
+- Validação básica via Data Annotations
+- Sem diferenciação entre tipos de update
+- Sem sanitização específica para updates
+
+### Após a Refatoração
+- ✅ Partial updates com controle granular
+- ✅ Sistema de flags para campos específicos
+- ✅ Validação contextual para updates
+- ✅ Detecção de updates significativos
+- ✅ Sanitização inteligente preservando dados
+- ✅ Propriedades computadas para análise
+- ✅ Suporte a merge de metadados
+- ✅ Factory methods para testing
+- ✅ Documentação XML completa
+- ✅ Performance otimizada para updates seletivos
+
+## 🛠️ Casos de Uso Avançados
+
+### Update de Preço com Histórico
+```csharp
+var priceUpdate = new UpdateProductDto
+{
+    Price = 299.99m,
+    Metadata = new Dictionary<string, string>
+    {
+        ["previous_price"] = "349.99",
+        ["price_change_date"] = DateTime.UtcNow.ToString("O"),
+        ["price_change_reason"] = "promotional_discount"
+    },
+    UpdateFields = new UpdateFields
+    {
+        Price = true,
+        Metadata = true
+    }
+};
+```
+
+### Update de Estoque com Auditoria
+```csharp
+var stockUpdate = new UpdateProductDto
+{
+    StockQuantity = 50,
+    MinimumStockLevel = 10,
+    Metadata = new Dictionary<string, string>
+    {
+        ["stock_adjustment_reason"] = "inventory_count",
+        ["adjusted_by"] = "user@company.com",
+        ["adjustment_date"] = DateTime.UtcNow.ToString("O")
+    },
+    UpdateFields = new UpdateFields
+    {
+        StockQuantity = true,
+        MinimumStockLevel = true,
+        Metadata = true
+    }
+};
+```
+
+## 📚 Benefícios Alcançados
+
+### Técnicos
+- **Performance**: Updates seletivos reduzem overhead
+- **Integridade**: Validação contextual mantém consistência
+- **Flexibilidade**: Partial updates permitem operações granulares
+- **Auditoria**: Rastreamento de campos modificados
+
+### Negócio
+- **Controle**: Gestão precisa de mudanças
+- **Eficiência**: Updates rápidos de campos específicos
+- **Rastreabilidade**: Histórico detalhado de modificações
+- **Segurança**: Validação robusta para cada contexto
+
+Esta implementação representa um DTO moderno e sofisticado para updates, oferecendo controle granular, performance otimizada e integridade de dados em operações de atualização complexas.

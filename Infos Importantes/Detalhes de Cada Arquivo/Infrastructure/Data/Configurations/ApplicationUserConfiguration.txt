@@ -1,0 +1,288 @@
+=================================
+DOCUMENTAÇÃO TÉCNICA - ApplicationUserConfiguration.cs
+=================================
+
+ARQUIVO: AuthTenant.Infrastructure/Data/Configurations/ApplicationUserConfiguration.cs
+CATEGORIA: Entity Configuration (Infrastructure)
+ÚLTIMA ATUALIZAÇÃO: ${DateTime.Now}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. VISÃO GERAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+DESCRIÇÃO:
+Configuração do Entity Framework para a entidade ApplicationUser, estendendo
+o IdentityUser do ASP.NET Core com propriedades específicas para multi-tenancy
+e informações de perfil. Esta configuração é crucial para autenticação e
+autorização em ambiente multi-tenant.
+
+RESPONSABILIDADES:
+• Estender IdentityUser com propriedades customizadas
+• Configurar isolamento multi-tenant para usuários
+• Definir relacionamentos com entidade Tenant
+• Estabelecer constraints únicos dentro de tenant
+• Otimizar performance com índices estratégicos
+• Configurar propriedades de Identity do ASP.NET Core
+
+ARQUITETURA:
+• ASP.NET Core Identity Extension
+• Multi-Tenant User Isolation
+• Fluent API Configuration Pattern
+• Performance-Optimized User Queries
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. ESTRUTURA TÉCNICA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+HERANÇA E IMPLEMENTAÇÃO:
+• ApplicationUser : IdentityUser
+• IEntityTypeConfiguration<ApplicationUser>
+
+MÉTODOS DE CONFIGURAÇÃO:
+• Configure(): Orquestração principal da configuração
+• ConfigureTenantRelationship(): Isolamento multi-tenant
+• ConfigureUserProfile(): Propriedades de perfil customizadas
+• ConfigureRelationships(): Relacionamentos com outras entidades
+• ConfigureIndexes(): Índices para performance
+• ConfigureIdentityProperties(): Propriedades do ASP.NET Identity
+
+PROPRIEDADES HERDADAS DO IDENTITYUSER:
+• Id, Email, UserName, PhoneNumber
+• EmailConfirmed, PhoneNumberConfirmed
+• TwoFactorEnabled, LockoutEnabled, LockoutEnd
+• AccessFailedCount, SecurityStamp, ConcurrencyStamp
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. PROPRIEDADES CUSTOMIZADAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ISOLAMENTO MULTI-TENANT:
+• TenantId (string, 100): Chave de isolamento, obrigatória
+• Garante que usuários pertencem a um tenant específico
+• Base para todas as operações de filtragem
+
+INFORMAÇÕES DE PERFIL:
+• FirstName (string, 100): Primeiro nome, obrigatório
+• LastName (string, 100): Sobrenome, obrigatório
+• Campos essenciais para identificação pessoal
+
+RELACIONAMENTOS:
+• Tenant: Navegação para entidade Tenant
+• Configurado com DeleteBehavior.Restrict
+• Garante integridade referencial
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. MULTI-TENANCY E ISOLAMENTO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ESTRATÉGIA DE ISOLAMENTO:
+• Usuários isolados por TenantId
+• Email único apenas dentro do tenant
+• UserName único apenas dentro do tenant
+• Compartilhamento impossível entre tenants
+
+CONSTRAINTS ÚNICOS:
+• (TenantId, Email): Email único por tenant
+• (TenantId, UserName): Username único por tenant
+• Permite mesmo email/username em tenants diferentes
+
+RELACIONAMENTO COM TENANT:
+• Foreign Key: TenantId → Tenant.Id
+• Restrição de exclusão: Restrict
+• Navegação bidirecional configurada
+• Integridade referencial garantida
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. CONFIGURAÇÃO DO ASP.NET IDENTITY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PROPRIEDADES DE AUTENTICAÇÃO:
+• Email (256 chars): Endereço de email do usuário
+• UserName (256 chars): Nome de login único
+• EmailConfirmed: Status de confirmação de email
+• PhoneNumber (20 chars): Número de telefone
+• PhoneNumberConfirmed: Status de confirmação do telefone
+
+SEGURANÇA E LOCKOUT:
+• TwoFactorEnabled: Habilitação de 2FA
+• LockoutEnabled: Possibilidade de bloqueio
+• LockoutEnd: Fim do período de bloqueio
+• AccessFailedCount: Contador de tentativas falhadas
+
+VALORES PADRÃO SEGUROS:
+• EmailConfirmed: false (requer confirmação)
+• PhoneNumberConfirmed: false (requer confirmação)
+• TwoFactorEnabled: false (opcional)
+• LockoutEnabled: true (segurança habilitada)
+• AccessFailedCount: 0 (início limpo)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. ESTRATÉGIA DE INDEXAÇÃO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ÍNDICES ÚNICOS:
+• IX_ApplicationUsers_TenantId_Email: Email único por tenant
+• IX_ApplicationUsers_TenantId_UserName: Username único por tenant
+• Garantem integridade e performance de login
+
+ÍNDICES DE FILTRAGEM:
+• IX_ApplicationUsers_TenantId: Filtragem básica por tenant
+• Otimiza listagens e consultas de usuários
+
+ÍNDICES DE BUSCA:
+• IX_ApplicationUsers_TenantId_FirstName_LastName: Busca por nome
+• Otimiza pesquisas e ordenações por nome completo
+
+BENEFÍCIOS DE PERFORMANCE:
+• Login O(1) por email ou username
+• Listagem eficiente por tenant
+• Busca rápida por nome
+• Validação de unicidade otimizada
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. INTEGRAÇÃO COM ASP.NET IDENTITY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CONFIGURAÇÃO NO STARTUP:
+```csharp
+services.AddIdentity<ApplicationUser, IdentityRole>()
+    .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddDefaultTokenProviders();
+```
+
+MANAGERS DISPONÍVEIS:
+• UserManager<ApplicationUser>: Gestão de usuários
+• SignInManager<ApplicationUser>: Gestão de login
+• RoleManager<IdentityRole>: Gestão de roles
+
+FUNCIONALIDADES AUTOMÁTICAS:
+• Hash de senhas com salt
+• Tokens de confirmação de email
+• Tokens de reset de senha
+• Lockout automático por tentativas
+• Two-factor authentication
+
+EXTENSIBILIDADE:
+• Claims customizados por tenant
+• Roles específicos por tenant
+• Policies baseadas em tenant
+• Middleware de tenant resolution
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+8. SEGURANÇA E BOAS PRÁTICAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ISOLAMENTO DE SEGURANÇA:
+• Usuários não podem acessar outros tenants
+• Validação automática de TenantId em operações
+• Claims incluem informação de tenant
+• Authorization policies aplicam isolamento
+
+VALIDAÇÕES DE ENTRADA:
+• Tamanhos máximos configurados
+• Campos obrigatórios definidos
+• Constraints de unicidade respeitados
+• Defaults seguros aplicados
+
+PROTEÇÕES IMPLEMENTADAS:
+• Lockout por tentativas falhadas
+• Confirmação obrigatória de email
+• Two-factor authentication opcional
+• Restrição de exclusão para integridade
+
+RECOMENDAÇÕES:
+• Sempre validar TenantId em controllers
+• Usar claims para informações de tenant
+• Implementar autorização baseada em tenant
+• Monitorar tentativas de acesso inválidas
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+9. EXEMPLO DE USO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+APLICAÇÃO DA CONFIGURAÇÃO:
+```csharp
+// Em DbContext
+protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.ApplyConfiguration(new ApplicationUserConfiguration());
+}
+```
+
+CRIAÇÃO DE USUÁRIO:
+```csharp
+var user = new ApplicationUser
+{
+    TenantId = "company-abc",
+    FirstName = "João",
+    LastName = "Silva",
+    Email = "joao.silva@company.com",
+    UserName = "joao.silva",
+    EmailConfirmed = false
+};
+
+var result = await userManager.CreateAsync(user, password);
+```
+
+BUSCA POR TENANT:
+```csharp
+// Usuários do tenant (usa índice)
+var users = await context.Users
+    .Where(u => u.TenantId == tenantId)
+    .OrderBy(u => u.FirstName)
+    .ThenBy(u => u.LastName)
+    .ToListAsync();
+
+// Login por email (usa índice único)
+var user = await userManager.FindByEmailAsync(email);
+if (user?.TenantId == currentTenantId)
+{
+    // Usuário válido para o tenant atual
+}
+```
+
+AUTORIZAÇÃO COM TENANT:
+```csharp
+[Authorize]
+public class ProductController : ControllerBase
+{
+    public async Task<IActionResult> GetProducts()
+    {
+        var tenantId = User.FindFirst("TenantId")?.Value;
+        var products = await productRepository
+            .GetByTenantAsync(tenantId);
+        return Ok(products);
+    }
+}
+```
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+10. TESTES E VALIDAÇÃO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CENÁRIOS DE TESTE:
+• Criação de usuário com dados válidos/inválidos
+• Validação de unicidade de email por tenant
+• Validação de unicidade de username por tenant
+• Relacionamento com tenant funcionando
+• Lockout e tentativas falhadas
+• Confirmação de email e telefone
+
+TESTES DE SEGURANÇA:
+• Isolamento entre tenants
+• Autorização baseada em tenant
+• Prevenção de cross-tenant access
+• Validação de claims e tokens
+
+TESTES DE PERFORMANCE:
+• Login por email (deve usar índice único)
+• Listagem por tenant (deve usar índice)
+• Busca por nome (deve usar índice composto)
+• Validação de performance em volumes altos
+
+TESTES DE INTEGRAÇÃO:
+• Integration com ASP.NET Identity
+• UserManager e SignInManager funcionando
+• Role-based authorization
+• Claims-based authorization
+• Token generation e validation

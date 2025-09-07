@@ -1,0 +1,17 @@
+﻿{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Warning",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=your-server;Database=MultiTenantApp_Prod;User Id=your-user;Password=your-password;TrustServerCertificate=true"
+  },
+  "JwtSettings": {
+    "Secret": "YourProductionSuperSecretKeyThatIsAtLeast32CharactersLong",
+    "Issuer": "MultiTenantApp",
+    "Audience": "MultiTenantAppUsers",
+    "ExpiryInMinutes": 60
+  }
+}

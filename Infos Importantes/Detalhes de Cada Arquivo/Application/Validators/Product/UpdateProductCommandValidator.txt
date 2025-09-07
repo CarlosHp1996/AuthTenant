@@ -1,0 +1,330 @@
+=========================================================
+UPDATEPRODUCTCOMMANDVALIDATOR.CS - DOCUMENTAÇÃO TÉCNICA
+=========================================================
+
+VISÃO GERAL:
+-----------
+Validator enterprise para comandos de atualização de produtos com validações abrangentes.
+Implementa regras de negócio específicas para modificação de produtos em sistemas multi-tenant.
+Inclui validações adicionais para mudanças drásticas e integridade referencial.
+
+LOCALIZAÇÃO:
+-----------
+📁 AuthTenant.Application/Validators/Product/UpdateProductCommandValidator.cs
+
+DEPENDÊNCIAS:
+------------
+✅ FluentValidation - Framework de validação
+✅ AuthTenant.Application.Commands.Product.UpdateProductCommand - Comando de atualização
+✅ System.Text.RegularExpressions - Validações regex
+✅ System.Globalization - Formatação de dados
+
+RESPONSABILIDADES:
+-----------------
+🔸 Validação de ID do produto existente
+🔸 Validação robusta de dados atualizados
+🔸 Verificação de mudanças drásticas
+🔸 Controle de qualidade de modificações
+🔸 Prevenção de corrupção de dados
+🔸 Aplicação de regras de negócio para atualizações
+
+VALIDAÇÕES IMPLEMENTADAS:
+------------------------
+
+1. ID DO PRODUTO:
+   ✅ Obrigatório e não pode ser vazio
+   ✅ Deve ser um GUID válido
+   ✅ Não pode ser GUID vazio (00000000-0000-0000-0000-000000000000)
+   ✅ Verificação de integridade do identificador
+
+2. NOME DO PRODUTO:
+   ✅ Obrigatório e não nulo
+   ✅ Comprimento entre 2 e 200 caracteres
+   ✅ Caracteres permitidos (letras, números, símbolos comerciais)
+   ✅ Não pode conter apenas espaços em branco
+   ✅ Não pode conter espaços excessivos
+   ✅ Não deve conter palavras repetidas
+   ✅ Deve ser descritivo e profissional
+   ✅ Verificação contra nomes proibidos (teste, dummy, etc.)
+
+3. DESCRIÇÃO:
+   ✅ Opcional, mas se fornecida, máximo 2000 caracteres
+   ✅ Não pode conter apenas espaços em branco
+   ✅ Verificação contra conteúdo perigoso (XSS)
+   ✅ Deve ser informativa e profissional
+   ✅ Detecção de conteúdo repetitivo/spam
+
+4. PREÇO:
+   ✅ Obrigatório e maior que zero
+   ✅ Valor entre R$ 0,01 e R$ 999.999,99
+   ✅ Máximo 2 casas decimais
+   ✅ Verificação contra valores extremos suspeitos
+   ✅ Validação de mudanças drásticas de preço
+   ✅ Detecção de alterações não razoáveis
+
+5. SKU (Stock Keeping Unit):
+   ✅ Opcional, mas se fornecido, entre 3 e 50 caracteres
+   ✅ Apenas letras maiúsculas, números, hífens e underscores
+   ✅ Não pode conter caracteres especiais consecutivos
+   ✅ Não pode começar ou terminar com caracteres especiais
+   ✅ Deve seguir formatos válidos (PROD-2024-001, ABC123, etc.)
+   ✅ Verificação de padrões profissionais
+
+6. QUANTIDADE EM ESTOQUE:
+   ✅ Obrigatório e não pode ser negativo
+   ✅ Máximo de 1.000.000 unidades
+   ✅ Verificação de valores razoáveis para atualizações
+   ✅ Detecção de mudanças drásticas de estoque
+   ✅ Validação de alterações suspeitas
+
+CONSTANTES DE VALIDAÇÃO:
+-----------------------
+📊 MIN_NAME_LENGTH = 2 caracteres
+📊 MAX_NAME_LENGTH = 200 caracteres
+📊 MAX_DESCRIPTION_LENGTH = 2000 caracteres
+📊 MIN_SKU_LENGTH = 3 caracteres
+📊 MAX_SKU_LENGTH = 50 caracteres
+📊 MIN_PRICE = R$ 0,01
+📊 MAX_PRICE = R$ 999.999,99
+📊 MAX_STOCK_QUANTITY = 1.000.000 unidades
+
+PADRÕES REGEX:
+--------------
+📊 SKU_PATTERN = ^[A-Z0-9\-_]+$
+📊 PRODUCT_NAME_PATTERN = ^[a-zA-ZÀ-ÿ0-9\s\-\.\/\(\)\&\'\+]+$
+
+CÓDIGOS DE ERRO PERSONALIZADOS:
+------------------------------
+❌ PRODUCT_ID_REQUIRED - ID obrigatório
+❌ PRODUCT_ID_INVALID - ID inválido
+❌ PRODUCT_NAME_REQUIRED - Nome obrigatório
+❌ PRODUCT_NAME_NULL - Nome não pode ser nulo
+❌ PRODUCT_NAME_LENGTH - Comprimento de nome inválido
+❌ PRODUCT_NAME_FORMAT - Formato de nome inválido
+❌ PRODUCT_NAME_WHITESPACE - Apenas espaços detectados
+❌ PRODUCT_NAME_EXCESSIVE_WHITESPACE - Espaços excessivos
+❌ PRODUCT_NAME_REPEATED_WORDS - Palavras repetidas
+❌ PRODUCT_NAME_INVALID - Nome não profissional
+❌ PRODUCT_DESCRIPTION_LENGTH - Descrição muito longa
+❌ PRODUCT_DESCRIPTION_WHITESPACE - Descrição apenas espaços
+❌ PRODUCT_DESCRIPTION_DANGEROUS - Conteúdo perigoso detectado
+❌ PRODUCT_DESCRIPTION_INVALID - Descrição não informativa
+❌ PRODUCT_PRICE_POSITIVE - Preço deve ser positivo
+❌ PRODUCT_PRICE_RANGE - Preço fora da faixa válida
+❌ PRODUCT_PRICE_DECIMALS - Casas decimais inválidas
+❌ PRODUCT_PRICE_EXTREME - Valor extremo detectado
+❌ PRODUCT_PRICE_DRASTIC_CHANGE - Mudança drástica de preço
+❌ PRODUCT_SKU_LENGTH - Comprimento de SKU inválido
+❌ PRODUCT_SKU_FORMAT - Formato de SKU inválido
+❌ PRODUCT_SKU_CONSECUTIVE - Caracteres consecutivos
+❌ PRODUCT_SKU_BOUNDARIES - Limites de SKU inválidos
+❌ PRODUCT_SKU_PATTERN - Padrão de SKU inválido
+❌ PRODUCT_STOCK_NEGATIVE - Estoque não pode ser negativo
+❌ PRODUCT_STOCK_MAXIMUM - Estoque excede máximo
+❌ PRODUCT_STOCK_UNREASONABLE - Quantidade não razoável
+❌ PRODUCT_STOCK_DRASTIC_CHANGE - Mudança drástica de estoque
+
+MÉTODOS DE VALIDAÇÃO CUSTOMIZADOS:
+---------------------------------
+
+🔧 BeValidGuid(Guid id)
+   - Verifica se o GUID é válido
+   - Confirma que não é GUID vazio
+   - Valida integridade do identificador
+
+🔧 NotContainOnlyWhitespace(string input)
+   - Verifica se não contém apenas espaços
+   - Valida conteúdo significativo
+   - Previne campos vazios disfarçados
+
+🔧 NotContainExcessiveWhitespace(string input)
+   - Detecta espaços duplos ou múltiplos
+   - Melhora qualidade dos dados
+   - Padroniza formatação
+
+🔧 NotContainRepeatedWords(string name)
+   - Detecta palavras duplicadas
+   - Melhora qualidade do nome
+   - Evita nomes redundantes
+
+🔧 BeValidProductName(string name)
+   - Verifica contra palavras proibidas
+   - Valida profissionalismo do nome
+   - Bloqueia nomes de teste
+
+🔧 NotContainDangerousContent(string description)
+   - Detecta tentativas de XSS
+   - Verifica padrões maliciosos
+   - Protege contra injeção de código
+
+🔧 BeValidDescription(string description)
+   - Analisa qualidade da descrição
+   - Detecta conteúdo repetitivo
+   - Verifica valor informativo
+
+🔧 HaveValidDecimalPlaces(decimal price)
+   - Verifica casas decimais do preço
+   - Garante formatação monetária correta
+   - Valida precisão comercial
+
+🔧 NotBeExtremeValue(decimal price)
+   - Detecta preços suspeitos
+   - Verifica valores comercialmente viáveis
+   - Previne erros de digitação
+
+🔧 NotHaveUnreasonablePriceChange(decimal newPrice)
+   - Detecta mudanças drásticas de preço
+   - Pode ser estendido para comparar com preço atual
+   - Previne alterações acidentais
+
+🔧 NotContainConsecutiveSpecialChars(string input)
+   - Detecta caracteres especiais consecutivos
+   - Melhora formatação de SKU
+   - Padroniza códigos de produto
+
+🔧 NotStartOrEndWithSpecialChars(string input)
+   - Verifica limites de SKU
+   - Aplica regras de formatação
+   - Melhora legibilidade
+
+🔧 BeValidSkuFormat(string sku)
+   - Valida formatos padrão de SKU
+   - Aceita múltiplos padrões comerciais
+   - Garante consistência de códigos
+
+🔧 BeReasonableStockQuantity(int quantity)
+   - Verifica quantidades razoáveis para atualizações
+   - Limite mais alto que criação (100.000 vs 50.000)
+   - Detecta erros de entrada
+
+🔧 NotHaveUnreasonableStockChange(int newStock)
+   - Detecta mudanças drásticas de estoque
+   - Pode ser estendido para comparar com estoque atual
+   - Previne alterações acidentais
+
+FUNCIONALIDADES DE SEGURANÇA:
+-----------------------------
+🔒 Validação de integridade de ID
+🔒 Prevenção de XSS em descrições
+🔒 Validação de entrada de dados
+🔒 Sanitização de campos de texto
+🔒 Detecção de mudanças suspeitas
+🔒 Códigos de erro não informativos
+🔒 Normalização de dados comerciais
+
+CONFIGURAÇÃO INTERNACIONAL:
+--------------------------
+🌐 Suporte a mensagens em português (pt-BR)
+🌐 Suporte a mensagens em inglês (en-US)
+🌐 Configuração dinâmica de cultura
+🌐 Formatação localizada de moeda
+🌐 Suporte a caracteres especiais
+
+PADRÕES ARQUITETURAIS:
+---------------------
+🏗️ Clean Architecture - Separação clara de responsabilidades
+🏗️ DDD (Domain-Driven Design) - Validação de domínio
+🏗️ SOLID Principles - Single Responsibility
+🏗️ Fail-Fast - Validação em cascata
+🏗️ Business Rules - Regras de negócio específicas
+
+INTEGRAÇÃO COM SISTEMA:
+----------------------
+🔗 MediatR Pipeline - Execução automática
+🔗 ProductsController - Validação de atualização
+🔗 Exception Middleware - Tratamento de erros
+🔗 Logging Behavior - Auditoria de modificações
+🔗 Product Repository - Verificação de existência
+🔗 Audit Service - Rastreamento de mudanças
+
+CENÁRIOS DE TESTE RECOMENDADOS:
+------------------------------
+✅ Atualização válida com dados completos
+✅ ID de produto inexistente
+✅ ID de produto com formato inválido
+✅ Nome muito curto ou muito longo
+✅ Nome com caracteres inválidos
+✅ Descrição muito longa
+✅ Descrição com código malicioso
+✅ Mudança drástica de preço (ex: R$ 100 para R$ 10.000)
+✅ Preço zero ou negativo
+✅ SKU com formato inválido
+✅ Mudança drástica de estoque (ex: 100 para 100.000)
+✅ Estoque negativo
+✅ Caracteres especiais maliciosos
+✅ Tentativas de atualização não autorizada
+
+PERFORMANCE:
+-----------
+⚡ Validação em cascata otimizada
+⚡ Regex compilada para performance
+⚡ Verificação rápida de padrões
+⚡ Cache de validações complexas
+⚡ Processamento eficiente de strings
+⚡ Validação incremental para mudanças
+
+MANUTENÇÃO:
+----------
+🔧 Lista de palavras proibidas atualizável
+🔧 Padrões de SKU configuráveis
+🔧 Limites de preço ajustáveis
+🔧 Códigos de erro personalizáveis
+🔧 Regras de mudanças drásticas configuráveis
+🔧 Thresholds de validação editáveis
+
+CONSIDERAÇÕES DE NEGÓCIO:
+------------------------
+⚠️ Validar existência do produto no banco
+⚠️ Verificar permissões de atualização
+⚠️ Implementar aprovação para mudanças drásticas
+⚠️ Considerar histórico de preços
+⚠️ Validar impacto em pedidos existentes
+⚠️ Implementar versionamento de produtos
+
+EXTENSÕES FUTURAS:
+-----------------
+🔮 Validação contra preço atual do banco
+🔮 Validação contra estoque atual do banco
+🔮 Aprovação workflow para mudanças grandes
+🔮 Integração com sistema de audit trail
+🔮 Validação de impacto em vendas ativas
+🔮 Notificação de mudanças significativas
+
+EXEMPLO DE USO:
+--------------
+```csharp
+var validator = new UpdateProductCommandValidator();
+var command = new UpdateProductCommand(
+    Guid.Parse("12345678-1234-1234-1234-123456789012"),
+    "Smartphone Galaxy S24 Ultra", 
+    "Smartphone Android com 256GB de armazenamento",
+    3499.99m,
+    "SAMS-2024-002",
+    150
+);
+var result = validator.Validate(command);
+
+if (!result.IsValid)
+{
+    // Processar erros de validação
+    foreach (var error in result.Errors)
+    {
+        Console.WriteLine($"{error.ErrorCode}: {error.ErrorMessage}");
+    }
+}
+```
+
+VERSIONAMENTO:
+-------------
+📋 Versão: 2.0.0
+📋 Última Atualização: 2024
+📋 Compatibilidade: .NET 8+
+📋 Status: Produção
+
+AUTOR & RESPONSÁVEL:
+-------------------
+👨‍💻 Desenvolvido por: Equipe AuthTenant
+👨‍💻 Mantido por: Time de Produtos
+📧 Contato: products@AuthTenant.com
+
+=========================================================
